@@ -1,0 +1,22 @@
+
+> yt-archive-system@1.0.0 test
+> jest
+
+PASS src/__tests__/build-config.test.js
+PASS src/__tests__/github-sync.test.js
+PASS src/__tests__/storage.test.js
+PASS src/__tests__/schema.test.js
+PASS src/__tests__/search.test.js
+PASS src/__tests__/youtube-api.test.js
+PASS src/__tests__/css-tokens.test.js
+PASS src/__tests__/app.test.js
+PASS src/__tests__/app-integration.test.js
+PASS src/__tests__/settings-ui.test.js
+PASS src/__tests__/offline-queue.test.js
+PASS src/__tests__/github-sync-real.test.js (6.353 s)
+
+Test Suites: 12 passed, 12 total
+Tests:       135 passed, 135 total
+Snapshots:   0 total
+Time:        6.963 s, estimated 7 s
+Ran all test suites.

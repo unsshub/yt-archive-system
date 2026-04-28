@@ -1,0 +1,109 @@
+/* src/css/tokens/variables.css */
+/* CSS Custom Properties Design System */
+
+:root {
+  /* ========== Color Palette ========== */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #dbeafe;
+  
+  --color-success: #059669;
+  --color-success-light: #d1fae5;
+  
+  --color-warning: #d97706;
+  --color-warning-light: #fef3c7;
+  
+  --color-error: #dc2626;
+  --color-error-light: #fee2e2;
+  
+  --color-info: #0284c7;
+  --color-info-light: #e0f2fe;
+  
+  /* Neutrals */
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+  
+  /* Overlay */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  
+  /* ========== Spacing Scale (8px base) ========== */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  
+  /* ========== Typography ========== */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+  
+  --text-xs: clamp(0.75rem, 1.5vw, 0.75rem);
+  --text-sm: clamp(0.875rem, 1.5vw, 0.875rem);
+  --text-base: clamp(1rem, 2vw, 1rem);
+  --text-lg: clamp(1.125rem, 2.5vw, 1.25rem);
+  --text-xl: clamp(1.25rem, 3vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 4vw, 2rem);
+  
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* ========== RTL-Aware Logical Properties ========== */
+  --border-radius: 0.5rem;
+  --border-radius-sm: 0.25rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-full: 9999px;
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  
+  /* ========== Transitions ========== */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
+  
+  /* ========== Z-Index Scale ========== */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+}
+
+/* ========== Dark Mode ========== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #3b82f6;
+    --color-primary-hover: #60a5fa;
+    --color-primary-light: #1e3a5f;
+    
+    --color-bg: #111827;
+    --color-bg-secondary: #1f2937;
+    --color-surface: #1f2937;
+    --color-border: #374151;
+    --color-text: #f9fafb;
+    --color-text-secondary: #d1d5db;
+    --color-text-muted: #9ca3af;
+    
+    --color-overlay: rgba(0, 0, 0, 0.7);
+    
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  }
+}

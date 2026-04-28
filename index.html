@@ -5,195 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="YT Archive System - Save and search YouTube videos offline">
     <meta name="theme-color" content="#2563eb">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="YT Archive">
-    <link rel="manifest" href="/assets/manifest.BhEq-7EQ.json">
+    <link rel="manifest" href="/yt-archive-system/manifest.json">
     <title>YT Archive System</title>
-    
-    <!-- CSS Design Tokens -->
-    
-    <!-- RTL Detection Script -->
+    <link rel="stylesheet" href="/yt-archive-system/assets/main.YlFjrA2U.css">
     <script>
-      // Auto-detect RTL languages (Arabic, Hebrew, etc.)
       (function() {
-        const rtlLanguages = ['ar', 'he', 'fa', 'ur'];
-        const userLang = navigator.language || navigator.userLanguage;
-        const primaryLang = userLang.split('-')[0];
-        
-        if (rtlLanguages.includes(primaryLang)) {
-          document.documentElement.dir = 'rtl';
-          document.documentElement.lang = userLang;
-        }
+        var rtl = ['ar','he','fa','ur'];
+        var lang = (navigator.language||'').split('-')[0];
+        if (rtl.includes(lang)) { document.documentElement.dir='rtl'; document.documentElement.lang=lang; }
       })();
     </script>
-  <link rel="stylesheet" crossorigin href="/assets/main.YlFjrA2U.css">
 </head>
 <body>
-    <!-- Offline Banner -->
-    <div id="offline-banner" class="offline-banner" style="display: none;" role="alert">
-        ⚠️ You are currently offline. Changes will be synced when connection is restored.
+    <div id="offline-banner" class="offline-banner" style="display:none" role="alert">
+        ⚠️ You are offline. Changes sync when connection restores.
     </div>
-
     <div id="app">
         <header class="app-header">
             <h1>📺 YT Archive System</h1>
             <div class="header-controls">
                 <span id="sync-status" class="sync-idle" aria-live="polite">✅ Synced</span>
-                <span id="connection-status" 
-                      class="status-disconnected" 
-                      aria-live="polite">
-                    ⚠️ Not Connected
-                </span>
-                <button id="settings-trigger" 
-                        class="btn btn-icon" 
-                        aria-label="Open Settings"
-                        title="GitHub Settings">
-                    ⚙️
-                </button>
+                <span id="connection-status" class="status-disconnected" aria-live="polite">⚠️ Not Connected</span>
+                <button id="settings-trigger" class="btn btn-icon" aria-label="Open Settings">⚙️</button>
             </div>
         </header>
-
         <main class="app-main">
-            <!-- Add Video Section -->
-            <section class="add-video-section" aria-labelledby="add-video-heading">
-                <h2 id="add-video-heading" class="section-title">Save Video</h2>
+            <section class="add-video-section">
+                <h2 class="section-title">Save Video</h2>
                 <div class="input-group">
-                    <input type="url" 
-                           id="video-url-input" 
-                           placeholder="Paste YouTube URL here..."
-                           aria-label="YouTube URL"
-                           autocomplete="off" />
-                    <button id="add-video-btn" 
-                            class="btn btn-primary" 
-                            aria-label="Add Video">
-                        ➕ Add
-                    </button>
+                    <input type="url" id="video-url-input" placeholder="Paste YouTube URL here..." autocomplete="off" />
+                    <button id="add-video-btn" class="btn btn-primary">➕ Add</button>
                 </div>
                 <div id="add-status" class="status-message" aria-live="polite"></div>
             </section>
-
-            <!-- Search Section -->
-            <section class="search-section" aria-labelledby="search-heading">
-                <h2 id="search-heading" class="section-title">Search Archive</h2>
-                <input type="search" 
-                       id="search-input" 
-                       placeholder="Search in English or Arabic..."
-                       aria-label="Search videos"
-                       autocomplete="off" />
+            <section class="search-section">
+                <h2 class="section-title">Search Archive</h2>
+                <input type="search" id="search-input" placeholder="Search in English or Arabic..." autocomplete="off" />
             </section>
-
-            <!-- Video Grid -->
-            <section class="video-grid-section" aria-labelledby="archive-heading">
-                <h2 id="archive-heading" class="section-title">
-                    Video Archive 
-                    <span id="video-count" class="count-badge">0</span>
-                </h2>
-                <div id="video-grid" class="video-grid" role="list">
-                    <!-- Videos rendered dynamically -->
-                </div>
-                <div id="empty-state" class="empty-state">
-                    <p>📭 No videos saved yet. Paste a YouTube URL above to get started!</p>
-                </div>
+            <section class="video-grid-section">
+                <h2 class="section-title">Video Archive <span id="video-count" class="count-badge">0</span></h2>
+                <div id="video-grid" class="video-grid" role="list"></div>
+                <div id="empty-state" class="empty-state"><p>📭 No videos saved yet.</p></div>
             </section>
-
-            <!-- Sync Button -->
-            <section class="sync-section" aria-labelledby="sync-heading">
-                <button id="sync-btn" class="btn btn-secondary">
-                    🔄 Sync to GitHub
-                </button>
+            <section class="sync-section">
+                <button id="sync-btn" class="btn btn-secondary">🔄 Sync to GitHub</button>
             </section>
         </main>
-
-        <!-- Settings Modal -->
-        <div id="settings-modal" 
-             class="modal" 
-             role="dialog" 
-             aria-labelledby="settings-title" 
-             aria-hidden="true">
+        <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-hidden="true">
             <div class="modal-overlay"></div>
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 id="settings-title">⚙️ GitHub Settings</h2>
-                    <button id="settings-close" 
-                            class="btn btn-icon" 
-                            aria-label="Close Settings">
-                        ✕
-                    </button>
+                    <button id="settings-close" class="btn btn-icon" aria-label="Close Settings">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="pat-input">
-                            Personal Access Token (PAT)
-                        </label>
-                        <input type="password" 
-                               id="pat-input" 
-                               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                               autocomplete="off"
-                               dir="ltr"
-                               spellcheck="false" />
-                        <small id="pat-help" class="form-help">
-                            Create a token with <strong>repo</strong> scope at 
-                            GitHub → Settings → Developer settings → Personal access tokens
-                        </small>
-                        <span id="pat-error" class="form-error" role="alert" aria-live="assertive"></span>
+                        <label for="pat-input">Personal Access Token (PAT)</label>
+                        <input type="password" id="pat-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" dir="ltr" />
+                        <small class="form-help">Create token with <strong>repo</strong> scope at GitHub → Settings → Developer settings</small>
+                        <span id="pat-error" class="form-error" role="alert"></span>
                     </div>
-                    
                     <div class="form-group">
                         <label for="repo-input">Repository</label>
-                        <input type="text" 
-                               id="repo-input" 
-                               placeholder="username/repository"
-                               dir="ltr"
-                               spellcheck="false" />
-                        <small class="form-help">
-                            Format: <code>owner/repository-name</code>
-                        </small>
-                        <span id="repo-error" class="form-error" role="alert" aria-live="assertive"></span>
+                        <input type="text" id="repo-input" placeholder="username/repository" dir="ltr" />
+                        <small class="form-help">Format: <code>owner/repository-name</code></small>
+                        <span id="repo-error" class="form-error" role="alert"></span>
                     </div>
-                    
                     <div class="form-group">
-                        <button id="test-connection-btn" class="btn btn-secondary">
-                            🔍 Test Connection
-                        </button>
+                        <button id="test-connection-btn" class="btn btn-secondary">🔍 Test Connection</button>
                         <span id="test-result" aria-live="polite"></span>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="settings-save" class="btn btn-primary">
-                        💾 Save Settings
-                    </button>
-                    <button id="settings-cancel" class="btn btn-secondary">
-                        Cancel
-                    </button>
+                    <button id="settings-save" class="btn btn-primary">💾 Save Settings</button>
+                    <button id="settings-cancel" class="btn btn-secondary">Cancel</button>
                 </div>
             </div>
         </div>
-
-        <!-- Toast Container -->
         <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
     </div>
-
-    <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('[SW] Registered:', registration.scope);
-            })
-            .catch((error) => {
-              console.warn('[SW] Registration failed:', error);
-            });
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/yt-archive-system/sw.js');
         });
       }
     </script>
-
-    <!-- Scripts -->
-    <script src="../src/js/services/storage.js"></script>
-    <script src="../src/js/services/youtube-api.js"></script>
-    <script src="../src/js/services/github-sync.js"></script>
-    <script src="../src/js/services/offline-queue.js"></script>
-    <script src="../src/js/app.js"></script>
+    <script src="/yt-archive-system/assets/main.js"></script>
 </body>
 </html>

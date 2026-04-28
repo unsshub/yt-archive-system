@@ -6,8 +6,8 @@
     <meta name="description" content="YT Archive System - Save and search YouTube videos offline">
     <meta name="theme-color" content="#2563eb">
     <link rel="manifest" href="/yt-archive-system/manifest.json">
-    <title>YT Archive System</title>
-    <link rel="stylesheet" href="/yt-archive-system/assets/main.YlFjrA2U.css">
+    <title>YT Archive System v2</title>
+    <link rel="stylesheet" href="/yt-archive-system/assets/main.v2.css?v=2">
     <script>
       (function() {
         var rtl = ['ar','he','fa','ur'];
@@ -22,9 +22,10 @@
     </div>
     <div id="app">
         <header class="app-header">
-            <h1>📺 YT Archive System</h1>
+            <h1>📺 YT Archive</h1>
             <div class="header-controls">
-                <span id="sync-status" class="sync-idle" aria-live="polite">✅ Synced</span>
+                <button id="theme-toggle" class="btn btn-icon" title="Toggle theme">🌙</button>
+                <button id="auto-sync-toggle" class="btn btn-sm" title="Toggle auto sync">🔄 Auto Sync: OFF</button>
                 <span id="connection-status" class="status-disconnected" aria-live="polite">⚠️ Not Connected</span>
                 <button id="settings-trigger" class="btn btn-icon" aria-label="Open Settings">⚙️</button>
             </div>
@@ -36,33 +37,63 @@
                     <input type="url" id="video-url-input" placeholder="Paste YouTube URL here..." autocomplete="off" />
                     <button id="add-video-btn" class="btn btn-primary">➕ Add</button>
                 </div>
+                <div class="input-group" style="margin-top:8px;">
+                    <input type="text" id="tag-input" placeholder="Tags (comma separated)" autocomplete="off" />
+                </div>
                 <div id="add-status" class="status-message" aria-live="polite"></div>
             </section>
+
+            <section class="actions-bar">
+                <div class="filter-group">
+                    <span id="date-filter-label" class="filter-label">📅 All Time</span>
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="today">Today</button>
+                    <button class="filter-btn" data-filter="week">Week</button>
+                    <button class="filter-btn" data-filter="month">Month</button>
+                    <button class="filter-btn" data-filter="favorites">⭐</button>
+                </div>
+                <div class="action-group">
+                    <button id="bulk-mode-btn" class="btn btn-sm" onclick="window.toggleBulkMode()">☑️ Bulk</button>
+                    <button id="export-btn" class="btn btn-sm">📤 Export</button>
+                    <button id="import-btn" class="btn btn-sm">📥 Import</button>
+                    <input type="file" id="import-file" accept=".json" style="display:none" />
+                </div>
+            </section>
+
+            <div id="bulk-action-bar" class="bulk-action-bar" style="display:none">
+                <span id="bulk-count">0 selected</span>
+                <button id="bulk-favorite-btn" class="btn btn-sm">⭐ Favorite</button>
+                <button id="bulk-delete-btn" class="btn btn-sm btn-danger">🗑️ Delete</button>
+                <button id="bulk-cancel-btn" class="btn btn-sm">✕ Cancel</button>
+            </div>
+
             <section class="search-section">
-                <h2 class="section-title">Search Archive</h2>
                 <input type="search" id="search-input" placeholder="Search in English or Arabic..." autocomplete="off" />
             </section>
+
             <section class="video-grid-section">
                 <h2 class="section-title">Video Archive <span id="video-count" class="count-badge">0</span></h2>
                 <div id="video-grid" class="video-grid" role="list"></div>
                 <div id="empty-state" class="empty-state"><p>📭 No videos saved yet.</p></div>
             </section>
+
             <section class="sync-section">
-                <button id="sync-btn" class="btn btn-secondary">🔄 Sync to GitHub</button>
+                <button id="sync-btn" class="btn btn-primary">🔄 Sync to GitHub</button>
             </section>
         </main>
+
         <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-hidden="true">
             <div class="modal-overlay"></div>
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 id="settings-title">⚙️ GitHub Settings</h2>
-                    <button id="settings-close" class="btn btn-icon" aria-label="Close Settings">✕</button>
+                    <button id="settings-close" class="btn btn-icon" aria-label="Close">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="pat-input">Personal Access Token (PAT)</label>
                         <input type="password" id="pat-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" dir="ltr" />
-                        <small class="form-help">Create token with <strong>repo</strong> scope at GitHub → Settings → Developer settings</small>
+                        <small class="form-help">Create token with <strong>repo</strong> scope</small>
                         <span id="pat-error" class="form-error" role="alert"></span>
                     </div>
                     <div class="form-group">
@@ -77,11 +108,12 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="settings-save" class="btn btn-primary">💾 Save Settings</button>
+                    <button id="settings-save" class="btn btn-primary">💾 Save</button>
                     <button id="settings-cancel" class="btn btn-secondary">Cancel</button>
                 </div>
             </div>
         </div>
+
         <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
     </div>
     <script>
@@ -91,6 +123,6 @@
         });
       }
     </script>
-    <script src="/yt-archive-system/assets/main.js"></script>
+    <script src="/yt-archive-system/assets/main.v2.js?v=2"></script>
 </body>
 </html>

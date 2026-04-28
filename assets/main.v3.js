@@ -1,8 +1,7 @@
-// YT Archive System v3 - Persistent Settings
+// YT Archive System v3 - Persistent Settings + URL Parameter Auto-Add
 (function() {
   'use strict';
 
-  // ============ Simple Obfuscation (NOT true encryption, just hides from casual viewing) ============
   function obfuscate(str) {
     if (!str) return '';
     return btoa(str.split('').map(function(c, i) {
@@ -17,13 +16,11 @@
     }).join('');
   }
 
-  // ============ Storage Keys ============
   var STORAGE_KEY = 'videos';
   var SETTINGS_KEY = 'yt-archive-settings';
   var PAT_KEY = 'yt-archive-pat';
   var REPO_KEY = 'yt-archive-repo';
 
-  // ============ Video Storage ============
   function loadArchive() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
     catch(e) { return []; }
@@ -33,7 +30,6 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
   }
 
-  // ============ Settings Storage ============
   function loadSettings() {
     try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }
     catch(e) { return {}; }
@@ -43,7 +39,6 @@
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
   }
 
-  // ============ PAT & Repo (localStorage - persists after browser close) ============
   function getPat() {
     var raw = localStorage.getItem(PAT_KEY);
     return raw ? deobfuscate(raw) : '';
@@ -63,12 +58,10 @@
     else localStorage.removeItem(REPO_KEY);
   }
 
-  // ============ App State ============
   var bulkMode = false;
   var selectedVideos = [];
   var currentFilter = 'all';
 
-  // ============ DOM ============
   function $(id) { return document.getElementById(id); }
 
   function getElements() {
@@ -98,7 +91,6 @@
 
   var el = {};
 
-  // ============ Toast ============
   function toast(msg, type, dur) {
     if (!el.toastContainer) return;
     type = type || 'info'; dur = dur || 3000;
@@ -109,7 +101,6 @@
     setTimeout(function() { t.remove(); }, dur);
   }
 
-  // ============ Theme ============
   function applyTheme(dark) {
     if (dark) {
       document.documentElement.setAttribute('data-theme', 'dark');
@@ -127,7 +118,6 @@
     applyTheme(s.darkMode);
   }
 
-  // ============ Auto Sync ============
   var autoSyncTimer = null;
 
   function updateAutoSyncUI(enabled) {
@@ -160,7 +150,6 @@
     syncToGitHub(loadArchive(), token, repo).catch(function(){});
   }
 
-  // ============ Connection Status ============
   function updateConnectionStatus() {
     var token = getPat();
     if (!el.connectionStatus) return;
@@ -173,7 +162,6 @@
     }
   }
 
-  // ============ GitHub Sync ============
   function syncToGitHub(videos, token, repo) {
     var parts = repo.split('/');
     if (parts.length < 2) return Promise.reject(new Error('Invalid repo format. Use: username/repo'));
@@ -218,7 +206,6 @@
     });
   }
 
-  // ============ Video CRUD ============
   function saveVideo(url, title, thumbnail, tags) {
     var video = {
       id: generateId(),
@@ -256,10 +243,9 @@
     if (loadSettings().autoSync) silentSync();
   }
 
-  // ============ Add Video ============
-  function addVideo() {
-    var url = (el.videoUrl || {}).value || '';
-    url = url.trim();
+  // ============ Add Video (supports auto-fill from URL param) ============
+  function addVideo(prefilledUrl) {
+    var url = prefilledUrl || (el.videoUrl ? el.videoUrl.value.trim() : '');
     if (!url) { toast('Enter a YouTube URL', 'warning'); return; }
     if (!/youtube\.com|youtu\.be/.test(url)) { toast('Invalid YouTube URL', 'error'); return; }
 
@@ -284,7 +270,7 @@
         saveVideo(url, data.title || 'Untitled', data.thumbnail_url || 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg', tags);
         if (el.videoUrl) el.videoUrl.value = '';
         if (el.tagInput) el.tagInput.value = '';
-        toast('Saved!', 'success');
+        toast('Saved: ' + (data.title || 'Video'), 'success');
         renderGrid();
         if (loadSettings().autoSync) silentSync();
       })
@@ -292,7 +278,6 @@
       .then(function() { if (el.addBtn) { el.addBtn.disabled = false; el.addBtn.textContent = '➕ Add'; } });
   }
 
-  // ============ Render ============
   function getFilteredVideos() {
     var videos = loadArchive();
     if (currentFilter === 'favorites') return videos.filter(function(v) { return v.favorite; });
@@ -376,7 +361,6 @@
     return d.innerHTML;
   }
 
-  // ============ Filters ============
   function setFilter(filter) {
     currentFilter = filter;
     document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
@@ -387,7 +371,6 @@
     renderGrid();
   }
 
-  // ============ Bulk ============
   function toggleBulkMode() {
     bulkMode = !bulkMode;
     selectedVideos = [];
@@ -431,7 +414,6 @@
     updateBulkUI(); renderGrid();
   }
 
-  // ============ Export/Import ============
   function exportArchive() {
     var data = JSON.stringify(loadArchive(), null, 2);
     var blob = new Blob([data], { type: 'application/json' });
@@ -462,7 +444,6 @@
     reader.readAsText(file);
   }
 
-  // ============ Manual Sync ============
   function manualSync() {
     var token = getPat();
     var repo = getRepo();
@@ -473,7 +454,6 @@
       .catch(function(err) { toast(err.message, 'error'); });
   }
 
-  // ============ Settings Modal ============
   function openSettings() {
     if (!el.settingsModal) return;
     el.settingsModal.classList.add('active');
@@ -532,8 +512,7 @@
     if (settings.autoSync) startAutoSync();
     updateConnectionStatus();
 
-    // Event listeners
-    if (el.addBtn) el.addBtn.addEventListener('click', addVideo);
+    if (el.addBtn) el.addBtn.addEventListener('click', function() { addVideo(); });
     if (el.videoUrl) el.videoUrl.addEventListener('keypress', function(e) { if (e.key === 'Enter') addVideo(); });
     if (el.searchInput) el.searchInput.addEventListener('input', renderGrid);
     if (el.themeToggle) el.themeToggle.addEventListener('click', toggleTheme);
@@ -543,13 +522,12 @@
       b.addEventListener('click', function() { setFilter(this.dataset.filter); });
     });
 
-    var bulkModeBtn = $('bulk-mode-btn');
-    if (bulkModeBtn) bulkModeBtn.addEventListener('click', toggleBulkMode);
+    if ($('bulk-mode-btn')) $('bulk-mode-btn').addEventListener('click', toggleBulkMode);
     if ($('bulk-delete-btn')) $('bulk-delete-btn').addEventListener('click', bulkDelete);
     if ($('bulk-favorite-btn')) $('bulk-favorite-btn').addEventListener('click', bulkFavorite);
     if ($('bulk-cancel-btn')) $('bulk-cancel-btn').addEventListener('click', cancelBulk);
 
-    if ($('export-btn')) $('export-btn').addEventListener('click', function() { exportArchive(); toast('Exported! 📤', 'success'); });
+    if ($('export-btn')) $('export-btn').addEventListener('click', function() { exportArchive(); toast('Exported!', 'success'); });
     if ($('import-btn')) $('import-btn').addEventListener('click', function() { if (el.importFile) el.importFile.click(); });
     if (el.importFile) el.importFile.addEventListener('change', function(e) {
       if (e.target.files[0]) { importArchive(e.target.files[0]); e.target.value = ''; }
@@ -583,6 +561,19 @@
     }
 
     renderGrid();
+
+    // ============ URL Parameter Auto-Add ============
+    var params = new URLSearchParams(window.location.search);
+    var urlParam = params.get('url');
+    if (urlParam) {
+      // Clean the URL (remove extra params from YouTube links)
+      var cleanUrl = urlParam.split('&')[0]; // Remove tracking params
+      if (el.videoUrl) el.videoUrl.value = cleanUrl;
+      // Auto-add with a small delay to ensure everything is ready
+      setTimeout(function() {
+        addVideo(cleanUrl);
+      }, 500);
+    }
   }
 
   window.toggleBulkMode = toggleBulkMode;

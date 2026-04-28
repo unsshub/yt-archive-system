@@ -1,421 +1,329 @@
-// YT Archive System v3 - Fixed: Single Tab + Bulk Actions
+// YT Archive v3 - Clean version
 (function() {
   'use strict';
+  var STORAGE_KEY = 'yt-archive-videos', SETTINGS_KEY = 'yt-archive-settings';
+  
+  function L() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"videos":[]}'); } catch(e) { return {videos:[]}; } }
+  function S(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+  function videos() { return L().videos || []; }
+  function saveVids(v) { var d = L(); d.videos = v; S(d); }
+  function pat() { return L().pat || ''; }
+  function setPat(t) { var d = L(); d.pat = t; S(d); }
+  function repo() { return L().repo || ''; }
+  function setRepo(r) { var d = L(); d.repo = r; S(d); }
+  function settings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch(e) { return {}; } }
+  function saveSettings(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 
-  var STORAGE_KEY = 'yt-archive-videos';
-
-  function loadAll() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"videos":[]}'); }
-    catch(e) { return { videos: [] }; }
-  }
-
-  function saveAll(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
-
-  function loadArchive() { return loadAll().videos || []; }
-  function saveArchive(videos) { var d = loadAll(); d.videos = videos; saveAll(d); }
-  function getPat() { return loadAll().pat || ''; }
-  function setPat(token) { var d = loadAll(); d.pat = token; saveAll(d); }
-  function getRepo() { return loadAll().repo || ''; }
-  function setRepo(repo) { var d = loadAll(); d.repo = repo; saveAll(d); }
-
-  var SETTINGS_KEY = 'yt-archive-settings';
-  function loadSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch(e) { return {}; } }
-  function saveSettingsObj(s) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
-
-  var bulkMode = false;
-  var selectedVideos = [];
-  var currentFilter = 'all';
-  var pendingBookmarkUrl = null;
-
-  function $(id) { return document.getElementById(id); }
-
-  function getElements() {
-    return {
-      videoUrl: $('video-url-input'), tagInput: $('tag-input'), addBtn: $('add-video-btn'),
-      searchInput: $('search-input'), videoGrid: $('video-grid'), emptyState: $('empty-state'),
-      videoCount: $('video-count'), toastContainer: $('toast-container'),
-      themeToggle: $('theme-toggle'), autoSyncToggle: $('auto-sync-toggle'),
-      connectionStatus: $('connection-status'), filterLabel: $('date-filter-label'),
-      bulkBar: $('bulk-action-bar'), bulkCount: $('bulk-count'),
-      settingsModal: $('settings-modal'), patInput: $('pat-input'), repoInput: $('repo-input'),
-      testResult: $('test-result'), testBtn: $('test-connection-btn'), importFile: $('import-file'),
-      tagModal: $('tag-modal'), tagModalInput: $('tag-modal-input'),
-      tagModalSave: $('tag-modal-save'), tagModalSkip: $('tag-modal-skip')
-    };
-  }
-
-  var el = {};
+  var bulkMode = false, selectedVideos = [], currentFilter = 'all', pendingUrl = null;
+  function E(id) { return document.getElementById(id); }
 
   function toast(msg, type, dur) {
-    if (!el.toastContainer) return;
+    var c = E('toast-container'); if (!c) return;
     type = type || 'info'; dur = dur || 3000;
-    var t = document.createElement('div');
-    t.className = 'toast toast-' + type;
-    t.innerHTML = '<span>' + msg + '</span>';
-    el.toastContainer.appendChild(t);
+    var t = document.createElement('div'); t.className = 'toast toast-' + type;
+    t.innerHTML = '<span>' + msg + '</span>'; c.appendChild(t);
     setTimeout(function() { t.remove(); }, dur);
   }
 
   function applyTheme(dark) {
-    if (dark) { document.documentElement.setAttribute('data-theme', 'dark'); if (el.themeToggle) el.themeToggle.textContent = '☀️'; }
-    else { document.documentElement.removeAttribute('data-theme'); if (el.themeToggle) el.themeToggle.textContent = '🌙'; }
+    if (dark) { document.documentElement.setAttribute('data-theme', 'dark'); var tt = E('theme-toggle'); if (tt) tt.textContent = '☀️'; }
+    else { document.documentElement.removeAttribute('data-theme'); var tt2 = E('theme-toggle'); if (tt2) tt2.textContent = '🌙'; }
   }
 
-  function toggleTheme() { var s = loadSettings(); s.darkMode = !s.darkMode; saveSettingsObj(s); applyTheme(s.darkMode); }
+  function toggleTheme() { var s = settings(); s.darkMode = !s.darkMode; saveSettings(s); applyTheme(s.darkMode); }
 
-  var autoSyncTimer = null;
-  function updateAutoSyncUI(e) { if (el.autoSyncToggle) el.autoSyncToggle.textContent = e ? '🔄 Auto: ON' : '🔄 Auto: OFF'; }
-  function toggleAutoSync() { var s = loadSettings(); s.autoSync = !s.autoSync; saveSettingsObj(s); updateAutoSyncUI(s.autoSync); if (s.autoSync) startAutoSync(); else stopAutoSync(); toast(s.autoSync ? 'Auto sync ON' : 'Auto sync OFF', 'info'); }
-  function startAutoSync() { stopAutoSync(); autoSyncTimer = setInterval(silentSync, 300000); }
-  function stopAutoSync() { if (autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; } }
-  function silentSync() { var t = getPat(), r = getRepo(); if (!t || !r) return; syncToGitHub(loadArchive(), t, r).catch(function(){}); }
+  var autoTimer = null;
+  function autoUI(e) { var b = E('auto-sync-toggle'); if (b) b.textContent = e ? '🔄 Auto: ON' : '🔄 Auto: OFF'; }
+  function toggleAuto() { var s = settings(); s.autoSync = !s.autoSync; saveSettings(s); autoUI(s.autoSync); if (s.autoSync) startAuto(); else stopAuto(); toast(s.autoSync ? 'Auto sync ON' : 'Auto sync OFF', 'info'); }
+  function startAuto() { stopAuto(); autoTimer = setInterval(silentSync, 300000); }
+  function stopAuto() { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } }
+  function silentSync() { var t = pat(), r = repo(); if (!t || !r) return; syncGH(videos(), t, r).catch(function(){}); }
 
-  function updateConnectionStatus() {
-    var token = getPat();
-    if (!el.connectionStatus) return;
-    if (token && token.length > 20) { el.connectionStatus.textContent = '✅ Connected'; el.connectionStatus.className = 'status-connected'; }
-    else { el.connectionStatus.textContent = '⚠️ Not Connected'; el.connectionStatus.className = 'status-disconnected'; }
+  function connStatus() {
+    var c = E('connection-status'); if (!c) return;
+    var t = pat();
+    if (t && t.length > 20) { c.textContent = '✅ Connected'; c.className = 'status-connected'; }
+    else { c.textContent = '⚠️ Not Connected'; c.className = 'status-disconnected'; }
   }
 
-  function syncToGitHub(videos, token, repo) {
-    var parts = repo.split('/');
-    if (parts.length < 2) return Promise.reject(new Error('Invalid repo format'));
+  function syncGH(vids, token, r) {
+    var parts = r.split('/');
     var url = 'https://api.github.com/repos/' + parts[0] + '/' + parts[1] + '/contents/data/videos.json';
     var sha = null;
     return fetch(url, { headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' } })
-    .then(function(r) { if (r.ok) return r.json().then(function(d) { sha = d.sha; }); if (r.status === 404) return null; throw new Error('GitHub error: ' + r.status); })
+    .then(function(res) { if (res.ok) return res.json().then(function(d) { sha = d.sha; }); if (res.status === 404) return null; throw new Error('GitHub error: ' + res.status); })
     .then(function() {
-      var content = btoa(unescape(encodeURIComponent(JSON.stringify(videos, null, 2))));
-      var body = { message: 'Update: ' + videos.length + ' video(s)', content: content, branch: 'main' };
+      var content = btoa(unescape(encodeURIComponent(JSON.stringify(vids, null, 2))));
+      var body = { message: 'Update: ' + vids.length + ' video(s)', content: content, branch: 'main' };
       if (sha) body.sha = sha;
       return fetch(url, { method: 'PUT', headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     })
-    .then(function(r) { if (!r.ok) { if (r.status === 409) throw new Error('Conflict. Try again.'); if (r.status === 401) throw new Error('Invalid token.'); throw new Error('Sync error: ' + r.status); } return r.json(); });
+    .then(function(res) { if (!res.ok) throw new Error('Sync error: ' + res.status); return res.json(); });
   }
 
-  function saveVideo(url, title, thumbnail, tags) {
-    var video = { id: generateId(), url: url, title: title, thumbnail: thumbnail, tags: tags || [], favorite: false, savedAt: new Date().toISOString() };
-    var a = loadArchive(); a.unshift(video); saveArchive(a);
-    return video;
-  }
+  function genId() { var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = ''; for (var i = 0; i < 11; i++) id += c[Math.floor(Math.random() * c.length)]; return id; }
 
-  function generateId() { var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = ''; for (var i = 0; i < 11; i++) id += c[Math.floor(Math.random() * c.length)]; return id; }
-
-  function toggleFavorite(videoId) { var a = loadArchive(); var v = a.find(function(x) { return x.id === videoId; }); if (v) { v.favorite = !v.favorite; saveArchive(a); } renderGrid(); }
-
-  function deleteVideoById(videoId) { var a = loadArchive(); saveArchive(a.filter(function(v) { return v.id !== videoId; })); renderGrid(); if (loadSettings().autoSync) silentSync(); }
-
-  function showTagModal(url) { pendingBookmarkUrl = url; if (el.tagModal) { el.tagModal.classList.add('active'); el.tagModal.setAttribute('aria-hidden', 'false'); if (el.tagModalInput) { el.tagModalInput.value = ''; setTimeout(function() { el.tagModalInput.focus(); }, 100); } } }
-  function hideTagModal() { if (el.tagModal) { el.tagModal.classList.remove('active'); el.tagModal.setAttribute('aria-hidden', 'true'); } }
-
-  function confirmTags() {
-    var tags = el.tagModalInput ? el.tagModalInput.value.trim() : '';
-    hideTagModal();
-    if (el.tagInput) el.tagInput.value = tags;
-    if (pendingBookmarkUrl) { doAddVideo(pendingBookmarkUrl, tags); pendingBookmarkUrl = null; }
-  }
-
-  function skipTags() {
-    hideTagModal();
-    if (pendingBookmarkUrl) { if (el.tagInput) el.tagInput.value = ''; doAddVideo(pendingBookmarkUrl, ''); pendingBookmarkUrl = null; }
-  }
-
-  function addVideo(prefilledUrl) {
-    if (prefilledUrl) { showTagModal(prefilledUrl); return; }
-    var url = el.videoUrl ? el.videoUrl.value.trim() : '';
-    var tags = el.tagInput ? el.tagInput.value.trim() : '';
-    doAddVideo(url, tags);
-  }
-
-  function doAddVideo(url, tags) {
+  function addVid(url, tags) {
     if (!url) { toast('Enter a YouTube URL', 'warning'); return; }
-    if (!/youtube\.com|youtu\.be/.test(url)) { toast('Invalid YouTube URL', 'error'); return; }
-    var tagList = [];
-    if (tags && tags.trim()) { tagList = tags.split(',').map(function(t) { return t.trim(); }).filter(Boolean); }
-    if (el.addBtn) { el.addBtn.disabled = true; el.addBtn.textContent = '⏳...'; }
-    var videoId = null;
-    var patterns = [/v=([a-zA-Z0-9_-]{11})/, /youtu\.be\/([a-zA-Z0-9_-]{11})/, /shorts\/([a-zA-Z0-9_-]{11})/];
-    for (var i = 0; i < patterns.length; i++) { var m = url.match(patterns[i]); if (m) { videoId = m[1]; break; } }
-    if (!videoId) { toast('Cannot extract video ID', 'error'); if (el.addBtn) { el.addBtn.disabled = false; el.addBtn.textContent = '➕ Add'; } return; }
-    fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + videoId + '&format=json')
-      .then(function(r) { if (!r.ok) throw new Error('Failed'); return r.json(); })
-      .then(function(data) {
-        saveVideo(url, data.title || 'Untitled', data.thumbnail_url || 'https://img.youtube.com/vi/' + videoId + '/hqdefault.jpg', tagList);
-        if (el.videoUrl) el.videoUrl.value = '';
-        if (el.tagInput) el.tagInput.value = '';
-        toast('Saved: ' + (data.title || 'Video'), 'success');
-        renderGrid();
-        if (loadSettings().autoSync) silentSync();
+    if (!/youtube\.com|youtu\.be/.test(url)) { toast('Invalid URL', 'error'); return; }
+    var tagList = (tags || '').split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+    var btn = E('add-video-btn'); if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+    var vid = null;
+    [/v=([a-zA-Z0-9_-]{11})/, /youtu\.be\/([a-zA-Z0-9_-]{11})/, /shorts\/([a-zA-Z0-9_-]{11})/].forEach(function(p) { var m = url.match(p); if (m) vid = m[1]; });
+    if (!vid) { toast('Cannot extract ID', 'error'); if (btn) { btn.disabled = false; btn.textContent = '➕ Add'; } return; }
+    fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + vid + '&format=json')
+      .then(function(r) { if (!r.ok) throw new Error('Fail'); return r.json(); })
+      .then(function(d) {
+        var vids = videos();
+        vids.unshift({ id: genId(), url: url, title: d.title || 'Untitled', thumbnail: d.thumbnail_url || 'https://img.youtube.com/vi/' + vid + '/hqdefault.jpg', tags: tagList, favorite: false, savedAt: new Date().toISOString() });
+        saveVids(vids);
+        var u = E('video-url-input'); if (u) u.value = '';
+        var ti = E('tag-input'); if (ti) ti.value = '';
+        toast('Saved: ' + (d.title || 'Video'), 'success');
+        render();
+        if (settings().autoSync) silentSync();
       })
-      .catch(function() { toast('Error fetching video info', 'error'); })
-      .then(function() { if (el.addBtn) { el.addBtn.disabled = false; el.addBtn.textContent = '➕ Add'; } });
+      .catch(function() { toast('Error fetching', 'error'); })
+      .then(function() { if (btn) { btn.disabled = false; btn.textContent = '➕ Add'; } });
   }
 
-  function getFilteredVideos() {
-    var videos = loadArchive();
-    if (currentFilter === 'favorites') return videos.filter(function(v) { return v.favorite; });
-    if (currentFilter === 'all') return videos;
+  function toggleFav(vid) { var v = videos(); var f = v.find(function(x) { return x.id === vid; }); if (f) { f.favorite = !f.favorite; saveVids(v); } render(); }
+  function delVid(vid) { saveVids(videos().filter(function(v) { return v.id !== vid; })); render(); if (settings().autoSync) silentSync(); }
+
+  function showTagModal(url) { pendingUrl = url; var m = E('tag-modal'); if (m) { m.classList.add('active'); m.setAttribute('aria-hidden', 'false'); var inp = E('tag-modal-input'); if (inp) { inp.value = ''; setTimeout(function() { inp.focus(); }, 100); } } }
+  function hideTagModal() { var m = E('tag-modal'); if (m) { m.classList.remove('active'); m.setAttribute('aria-hidden', 'true'); } }
+  function confirmTags() { var tags = (E('tag-modal-input') || {}).value || ''; hideTagModal(); if (pendingUrl) { addVid(pendingUrl, tags); pendingUrl = null; } }
+  function skipTags() { hideTagModal(); if (pendingUrl) { addVid(pendingUrl, ''); pendingUrl = null; } }
+
+  function doAdd(prefilled) {
+    if (prefilled) { showTagModal(prefilled); return; }
+    var u = (E('video-url-input') || {}).value || '';
+    var t = (E('tag-input') || {}).value || '';
+    addVid(u.trim(), t.trim());
+  }
+
+  function filtered() {
+    var v = videos();
+    if (currentFilter === 'favorites') return v.filter(function(x) { return x.favorite; });
+    if (currentFilter === 'all') return v;
     var now = new Date(), cutoff;
     if (currentFilter === 'today') cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     else if (currentFilter === 'week') cutoff = new Date(now.getTime() - 7*86400000);
     else if (currentFilter === 'month') cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
-    return videos.filter(function(v) { return new Date(v.savedAt) >= cutoff; });
+    return v.filter(function(x) { return new Date(x.savedAt) >= cutoff; });
   }
 
-  function renderGrid() {
-    if (!el.videoGrid) return;
-    var query = el.searchInput ? el.searchInput.value.trim().toLowerCase() : '';
-    var videos = getFilteredVideos();
-    if (query) { videos = videos.filter(function(v) { return v.title.toLowerCase().indexOf(query) !== -1 || (v.tags || []).some(function(t) { return t.toLowerCase().indexOf(query) !== -1; }); }); }
-    if (el.videoCount) el.videoCount.textContent = videos.length;
-    el.videoGrid.innerHTML = '';
-    if (videos.length === 0) { if (el.emptyState) el.emptyState.style.display = 'block'; return; }
-    if (el.emptyState) el.emptyState.style.display = 'none';
+  function render() {
+    var grid = E('video-grid'); if (!grid) return;
+    var q = (E('search-input') || {}).value || '';
+    var v = filtered();
+    if (q) { q = q.toLowerCase(); v = v.filter(function(x) { return x.title.toLowerCase().indexOf(q) !== -1 || (x.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) !== -1; }); }); }
+    var vc = E('video-count'); if (vc) vc.textContent = v.length;
+    grid.innerHTML = '';
+    var es = E('empty-state');
+    if (v.length === 0) { if (es) es.style.display = 'block'; return; }
+    if (es) es.style.display = 'none';
 
-    videos.forEach(function(v) {
+    v.forEach(function(x) {
       var card = document.createElement('div');
-      card.className = 'video-card' + (v.favorite ? ' favorite' : '') + (bulkMode && selectedVideos.indexOf(v.id) > -1 ? ' selected' : '');
+      card.className = 'video-card' + (x.favorite ? ' favorite' : '') + (bulkMode && selectedVideos.indexOf(x.id) > -1 ? ' selected' : '');
       var tagsHtml = '';
-      if (v.tags && v.tags.length) { tagsHtml = '<div class="video-tags">' + v.tags.map(function(t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>'; }
+      if (x.tags && x.tags.length) { tagsHtml = '<div class="video-tags">' + x.tags.map(function(t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>'; }
       card.innerHTML = 
-        (bulkMode ? '<input type="checkbox" class="bulk-checkbox" data-id="' + v.id + '"' + (selectedVideos.indexOf(v.id) > -1 ? ' checked' : '') + '>' : '') +
-        '<a href="' + v.url + '" target="_blank" rel="noopener" class="video-card-link"><img src="' + v.thumbnail + '" alt="" class="video-thumbnail" loading="lazy" /><div class="video-info"><h3 class="video-title">' + esc(v.title) + '</h3>' + tagsHtml + '<p class="video-date">' + new Date(v.savedAt).toLocaleDateString() + '</p></div></a>' +
-        '<div class="video-actions"><button class="btn-fav" data-id="' + v.id + '">' + (v.favorite ? '⭐' : '☆') + '</button><button class="btn-del" data-id="' + v.id + '" data-title="' + esc(v.title) + '">🗑️</button></div>';
-      el.videoGrid.appendChild(card);
+        (bulkMode ? '<input type="checkbox" class="bulk-checkbox" data-id="' + x.id + '"' + (selectedVideos.indexOf(x.id) > -1 ? ' checked' : '') + '>' : '') +
+        '<a href="' + x.url + '" target="_blank" rel="noopener" class="video-card-link"><img src="' + x.thumbnail + '" alt="" class="video-thumbnail" loading="lazy" /><div class="video-info"><h3 class="video-title">' + esc(x.title) + '</h3>' + tagsHtml + '<p class="video-date">' + new Date(x.savedAt).toLocaleDateString() + '</p></div></a>' +
+        '<div class="video-actions"><button class="btn-fav" data-id="' + x.id + '">' + (x.favorite ? '⭐' : '☆') + '</button><button class="btn-del" data-id="' + x.id + '" data-title="' + esc(x.title) + '">🗑️</button></div>';
+      grid.appendChild(card);
     });
 
-    el.videoGrid.querySelectorAll('.btn-fav').forEach(function(b) { b.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); toggleFavorite(this.dataset.id); }); });
-    el.videoGrid.querySelectorAll('.btn-del').forEach(function(b) { b.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); if (confirm('Delete "' + this.dataset.title + '"?')) deleteVideoById(this.dataset.id); }); });
-    el.videoGrid.querySelectorAll('.bulk-checkbox').forEach(function(cb) {
-      cb.addEventListener('change', function() {
-        var id = this.dataset.id;
-        var idx = selectedVideos.indexOf(id);
-        if (idx > -1) selectedVideos.splice(idx, 1);
-        else selectedVideos.push(id);
+    grid.querySelectorAll('.btn-fav').forEach(function(b) { b.onclick = function(e) { e.preventDefault(); e.stopPropagation(); toggleFav(this.dataset.id); }; });
+    grid.querySelectorAll('.btn-del').forEach(function(b) { b.onclick = function(e) { e.preventDefault(); e.stopPropagation(); if (confirm('Delete "' + this.dataset.title + '"?')) delVid(this.dataset.id); }; });
+    grid.querySelectorAll('.bulk-checkbox').forEach(function(cb) {
+      cb.onchange = function() {
+        var id = this.dataset.id, idx = selectedVideos.indexOf(id);
+        if (idx > -1) selectedVideos.splice(idx, 1); else selectedVideos.push(id);
         updateBulkUI();
-        var card = this.closest('.video-card');
-        if (card) card.classList.toggle('selected', selectedVideos.indexOf(id) > -1);
-      });
+        var card = this.closest('.video-card'); if (card) card.classList.toggle('selected', selectedVideos.indexOf(id) > -1);
+      };
     });
   }
 
   function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-  function setFilter(filter) {
-    currentFilter = filter;
+  function setFilter(f) {
+    currentFilter = f;
     document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
-    var btn = document.querySelector('[data-filter="' + filter + '"]');
-    if (btn) btn.classList.add('active');
+    var btn = document.querySelector('[data-filter="' + f + '"]'); if (btn) btn.classList.add('active');
     var labels = { all: 'All Time', today: 'Today', week: 'This Week', month: 'This Month', favorites: '⭐ Favorites' };
-    if (el.filterLabel) el.filterLabel.textContent = '📅 ' + (labels[filter] || 'All');
-    renderGrid();
+    var fl = E('date-filter-label'); if (fl) fl.textContent = '📅 ' + (labels[f] || 'All');
+    render();
   }
 
-  // ============ BULK ACTIONS - FULLY REWRITTEN ============
-  function toggleBulkMode() {
-    bulkMode = !bulkMode;
-    selectedVideos = [];
-    updateBulkUI();
-    renderGrid();
-    if (!bulkMode && el.bulkBar) el.bulkBar.style.display = 'none';
+  function toggleBulk() {
+    bulkMode = !bulkMode; selectedVideos = []; updateBulkUI(); render();
+    if (!bulkMode) { var bb = E('bulk-action-bar'); if (bb) bb.style.display = 'none'; }
   }
 
   function updateBulkUI() {
-    if (!el.bulkBar) return;
-    if (bulkMode) {
-      el.bulkBar.style.display = 'flex';
-      el.bulkCount.textContent = selectedVideos.length ? selectedVideos.length + ' selected' : 'Click videos to select';
-    } else {
-      el.bulkBar.style.display = 'none';
-    }
+    var bb = E('bulk-action-bar'); if (!bb) return;
+    if (bulkMode) { bb.style.display = 'flex'; var bc = E('bulk-count'); if (bc) bc.textContent = selectedVideos.length ? selectedVideos.length + ' selected' : 'Click videos to select'; }
+    else { bb.style.display = 'none'; }
   }
 
-  function bulkDelete() {
-    if (selectedVideos.length === 0) { toast('Select videos first!', 'warning'); return; }
-    var count = selectedVideos.length;
-    if (!confirm('Delete ' + count + ' video(s)?')) return;
-    var archive = loadArchive();
-    saveArchive(archive.filter(function(v) { return selectedVideos.indexOf(v.id) === -1; }));
-    selectedVideos = [];
-    bulkMode = false;
-    updateBulkUI();
-    renderGrid();
-    toast('Deleted ' + count + ' video(s)!', 'success');
+  function bulkDel() {
+    if (!selectedVideos.length) { toast('Select videos first', 'warning'); return; }
+    var c = selectedVideos.length;
+    if (!confirm('Delete ' + c + ' video(s)?')) return;
+    saveVids(videos().filter(function(v) { return selectedVideos.indexOf(v.id) === -1; }));
+    selectedVideos = []; bulkMode = false; updateBulkUI(); render();
+    toast('Deleted ' + c + ' video(s)!', 'success');
   }
 
-  function bulkFavorite() {
-    if (selectedVideos.length === 0) { toast('Select videos first!', 'warning'); return; }
-    var count = selectedVideos.length;
-    var archive = loadArchive();
-    archive.forEach(function(v) { if (selectedVideos.indexOf(v.id) > -1) v.favorite = true; });
-    saveArchive(archive);
-    selectedVideos = [];
-    bulkMode = false;
-    updateBulkUI();
-    renderGrid();
-    toast('Favorited ' + count + ' video(s)!', 'success');
+  function bulkFav() {
+    if (!selectedVideos.length) { toast('Select videos first', 'warning'); return; }
+    var c = selectedVideos.length;
+    var v = videos(); v.forEach(function(x) { if (selectedVideos.indexOf(x.id) > -1) x.favorite = true; }); saveVids(v);
+    selectedVideos = []; bulkMode = false; updateBulkUI(); render();
+    toast('Favorited ' + c + ' video(s)!', 'success');
   }
 
-  function cancelBulk() {
-    bulkMode = false;
-    selectedVideos = [];
-    updateBulkUI();
-    renderGrid();
-  }
+  function bulkCancel() { bulkMode = false; selectedVideos = []; updateBulkUI(); render(); }
 
-  function exportArchive() {
-    var data = JSON.stringify(loadAll(), null, 2);
+  function doExport() {
+    var data = JSON.stringify(L(), null, 2);
     var blob = new Blob([data], { type: 'application/json' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'yt-archive-' + new Date().toISOString().split('T')[0] + '.json';
-    a.click();
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'yt-archive-' + new Date().toISOString().split('T')[0] + '.json'; a.click();
   }
 
-  function importArchive(file) {
+  function doImport(file) {
     var reader = new FileReader();
     reader.onload = function(e) {
       try {
         var imported = JSON.parse(e.target.result);
-        var existing = loadAll();
+        var existing = L();
         if (!imported.videos && Array.isArray(imported)) imported = { videos: imported };
         imported.videos = imported.videos || [];
         var count = 0;
         imported.videos.forEach(function(v) { if (!existing.videos.some(function(x) { return x.id === v.id || x.url === v.url; })) { existing.videos.push(v); count++; } });
         if (imported.pat && !existing.pat) existing.pat = imported.pat;
         if (imported.repo && !existing.repo) existing.repo = imported.repo;
-        saveAll(existing);
-        updateConnectionStatus();
-        toast('Imported ' + count + ' video(s)!', 'success');
-        renderGrid();
+        S(existing); connStatus();
+        toast('Imported ' + count + ' video(s)!', 'success'); render();
       } catch(err) { toast('Invalid file', 'error'); }
     };
     reader.readAsText(file);
   }
 
-  function manualSync() {
-    var token = getPat(), repo = getRepo();
-    if (!token || !repo) { toast('Set up GitHub in Settings first', 'warning'); openSettings(); return; }
+  function doSync() {
+    var t = pat(), r = repo();
+    if (!t || !r) { toast('Set up GitHub in Settings first', 'warning'); openSettings(); return; }
     toast('Syncing...', 'info');
-    syncToGitHub(loadArchive(), token, repo).then(function() { toast('Synced!', 'success'); }).catch(function(err) { toast(err.message, 'error'); });
+    syncGH(videos(), t, r).then(function() { toast('Synced!', 'success'); }).catch(function(err) { toast(err.message, 'error'); });
   }
 
   function openSettings() {
-    if (!el.settingsModal) return;
-    el.settingsModal.classList.add('active'); el.settingsModal.setAttribute('aria-hidden', 'false');
-    if (el.patInput) el.patInput.value = getPat();
-    if (el.repoInput) el.repoInput.value = getRepo();
-    if (el.testResult) { el.testResult.textContent = ''; el.testResult.className = ''; }
+    var m = E('settings-modal'); if (!m) return;
+    m.classList.add('active'); m.setAttribute('aria-hidden', 'false');
+    var pi = E('pat-input'); if (pi) pi.value = pat();
+    var ri = E('repo-input'); if (ri) ri.value = repo();
+    var tr = E('test-result'); if (tr) { tr.textContent = ''; tr.className = ''; }
   }
 
-  function closeSettings() { if (el.settingsModal) { el.settingsModal.classList.remove('active'); el.settingsModal.setAttribute('aria-hidden', 'true'); } }
+  function closeSettings() { var m = E('settings-modal'); if (m) { m.classList.remove('active'); m.setAttribute('aria-hidden', 'true'); } }
 
-  function saveSettingsModal() {
-    var pat = (el.patInput || {}).value || '', repo = (el.repoInput || {}).value || '';
-    if (!pat) { toast('Token required', 'warning'); return; }
-    setPat(pat.trim()); setRepo(repo.trim());
-    updateConnectionStatus(); closeSettings();
+  function saveSettingsMod() {
+    var p = ((E('pat-input') || {}).value || '').trim();
+    var r = ((E('repo-input') || {}).value || '').trim();
+    if (!p) { toast('Token required', 'warning'); return; }
+    setPat(p); setRepo(r); connStatus(); closeSettings();
     toast('Settings saved!', 'success');
   }
 
-  function testConnection() {
-    var pat = (el.patInput || {}).value || '';
-    if (!pat) return;
-    if (el.testBtn) { el.testBtn.disabled = true; el.testBtn.textContent = '⏳...'; }
-    if (el.testResult) { el.testResult.textContent = ''; el.testResult.className = ''; }
-    fetch('https://api.github.com/user', { headers: { 'Authorization': 'token ' + pat, 'Accept': 'application/vnd.github.v3+json' } })
-    .then(function(r) { if (r.ok) return r.json().then(function(d) { if (el.testResult) { el.testResult.textContent = '✅ ' + d.login; el.testResult.className = 'success'; } }); if (el.testResult) { el.testResult.textContent = '❌ Auth failed'; el.testResult.className = 'error'; } })
-    .catch(function() { if (el.testResult) { el.testResult.textContent = '❌ Network error'; el.testResult.className = 'error'; } })
-    .then(function() { if (el.testBtn) { el.testBtn.disabled = false; el.testBtn.textContent = '🔍 Test Connection'; } });
+  function testConn() {
+    var p = ((E('pat-input') || {}).value || '').trim(); if (!p) return;
+    var btn = E('test-connection-btn'); if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+    var tr = E('test-result'); if (tr) { tr.textContent = ''; tr.className = ''; }
+    fetch('https://api.github.com/user', { headers: { 'Authorization': 'token ' + p, 'Accept': 'application/vnd.github.v3+json' } })
+    .then(function(r) { if (r.ok) return r.json().then(function(d) { if (tr) { tr.textContent = '✅ ' + d.login; tr.className = 'success'; } }); if (tr) { tr.textContent = '❌ Auth failed'; tr.className = 'error'; } })
+    .catch(function() { if (tr) { tr.textContent = '❌ Network error'; tr.className = 'error'; } })
+    .then(function() { if (btn) { btn.disabled = false; btn.textContent = '🔍 Test Connection'; } });
   }
 
   function init() {
-    el = getElements();
-
-    var settings = loadSettings();
-    applyTheme(settings.darkMode || false);
-    updateAutoSyncUI(settings.autoSync || false);
-    if (settings.autoSync) startAutoSync();
-    updateConnectionStatus();
+    var s = settings();
+    applyTheme(s.darkMode || false); autoUI(s.autoSync || false);
+    if (s.autoSync) startAuto(); connStatus();
 
     // Add video
-    if (el.addBtn) el.addBtn.addEventListener('click', function() { addVideo(); });
-    if (el.videoUrl) el.videoUrl.addEventListener('keypress', function(e) { if (e.key === 'Enter') addVideo(); });
+    var ab = E('add-video-btn'); if (ab) ab.addEventListener('click', function() { doAdd(); });
+    var vu = E('video-url-input'); if (vu) vu.addEventListener('keypress', function(e) { if (e.key === 'Enter') doAdd(); });
 
     // Search
-    if (el.searchInput) el.searchInput.addEventListener('input', renderGrid);
+    var si = E('search-input'); if (si) si.addEventListener('input', render);
 
-    // Theme & Auto Sync
-    if (el.themeToggle) el.themeToggle.addEventListener('click', toggleTheme);
-    if (el.autoSyncToggle) el.autoSyncToggle.addEventListener('click', toggleAutoSync);
+    // Theme & Auto
+    var tt = E('theme-toggle'); if (tt) tt.addEventListener('click', toggleTheme);
+    var at = E('auto-sync-toggle'); if (at) at.addEventListener('click', toggleAuto);
 
     // Tag modal
-    if (el.tagModalSave) el.tagModalSave.addEventListener('click', confirmTags);
-    if (el.tagModalSkip) el.tagModalSkip.addEventListener('click', skipTags);
-    if (el.tagModal) { var to = el.tagModal.querySelector('.modal-overlay'); if (to) to.addEventListener('click', skipTags); }
+    var tms = E('tag-modal-save'); if (tms) tms.addEventListener('click', confirmTags);
+    var tmk = E('tag-modal-skip'); if (tmk) tmk.addEventListener('click', skipTags);
+    var tmc = E('tag-modal-close'); if (tmc) tmc.addEventListener('click', skipTags);
+    var tm = E('tag-modal'); if (tm) { var tmo = tm.querySelector('.modal-overlay'); if (tmo) tmo.addEventListener('click', skipTags); }
 
     // Filters
     document.querySelectorAll('.filter-btn').forEach(function(b) { b.addEventListener('click', function() { setFilter(this.dataset.filter); }); });
 
-    // Bulk buttons - DIRECT event listeners (no replaceWith needed)
-    var bulkModeBtn = $('bulk-mode-btn');
-    if (bulkModeBtn) { bulkModeBtn.addEventListener('click', toggleBulkMode); }
-    var bulkDelBtn = $('bulk-delete-btn');
-    if (bulkDelBtn) { bulkDelBtn.addEventListener('click', bulkDelete); }
-    var bulkFavBtn = $('bulk-favorite-btn');
-    if (bulkFavBtn) { bulkFavBtn.addEventListener('click', bulkFavorite); }
-    var bulkCanBtn = $('bulk-cancel-btn');
-    if (bulkCanBtn) { bulkCanBtn.addEventListener('click', cancelBulk); }
+    // Bulk buttons
+    var bmb = E('bulk-mode-btn'); if (bmb) bmb.addEventListener('click', toggleBulk);
+    var bdb = E('bulk-delete-btn'); if (bdb) bdb.addEventListener('click', bulkDel);
+    var bfb = E('bulk-favorite-btn'); if (bfb) bfb.addEventListener('click', bulkFav);
+    var bcb = E('bulk-cancel-btn'); if (bcb) bcb.addEventListener('click', bulkCancel);
 
     // Export/Import
-    if ($('export-btn')) $('export-btn').addEventListener('click', function() { exportArchive(); toast('Exported!', 'success'); });
-    if ($('import-btn')) $('import-btn').addEventListener('click', function() { if (el.importFile) el.importFile.click(); });
-    if (el.importFile) el.importFile.addEventListener('change', function(e) { if (e.target.files[0]) { importArchive(e.target.files[0]); e.target.value = ''; } });
+    var exb = E('export-btn'); if (exb) exb.addEventListener('click', function() { doExport(); toast('Exported!', 'success'); });
+    var imb = E('import-btn'); if (imb) imb.addEventListener('click', function() { var f = E('import-file'); if (f) f.click(); });
+    var imf = E('import-file'); if (imf) imf.addEventListener('change', function(e) { if (e.target.files[0]) { doImport(e.target.files[0]); e.target.value = ''; } });
 
     // Settings
-    if ($('settings-trigger')) $('settings-trigger').addEventListener('click', openSettings);
-    if ($('settings-close')) $('settings-close').addEventListener('click', closeSettings);
-    if ($('settings-cancel')) $('settings-cancel').addEventListener('click', closeSettings);
-    if ($('settings-save')) $('settings-save').addEventListener('click', saveSettingsModal);
-    if (el.testBtn) el.testBtn.addEventListener('click', testConnection);
-    if (el.settingsModal) { var ov = el.settingsModal.querySelector('.modal-overlay'); if (ov) ov.addEventListener('click', closeSettings); }
+    var st = E('settings-trigger'); if (st) st.addEventListener('click', openSettings);
+    var sc = E('settings-close'); if (sc) sc.addEventListener('click', closeSettings);
+    var scc = E('settings-cancel'); if (scc) scc.addEventListener('click', closeSettings);
+    var ss = E('settings-save'); if (ss) ss.addEventListener('click', saveSettingsMod);
+    var tcb = E('test-connection-btn'); if (tcb) tcb.addEventListener('click', testConn);
+    var sm = E('settings-modal'); if (sm) { var smo = sm.querySelector('.modal-overlay'); if (smo) smo.addEventListener('click', closeSettings); }
 
     // Sync
-    if ($('sync-btn')) $('sync-btn').addEventListener('click', manualSync);
+    var syb = E('sync-btn'); if (syb) syb.addEventListener('click', doSync);
 
     // Keyboard
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
-        if (el.tagModal && el.tagModal.classList.contains('active')) skipTags();
-        if (el.settingsModal && el.settingsModal.classList.contains('active')) closeSettings();
+        var tm2 = E('tag-modal'); if (tm2 && tm2.classList.contains('active')) skipTags();
+        var sm2 = E('settings-modal'); if (sm2 && sm2.classList.contains('active')) closeSettings();
       }
     });
 
     // Online/Offline
-    window.addEventListener('online', function() { var b = $('offline-banner'); if (b) b.style.display = 'none'; });
-    window.addEventListener('offline', function() { var b = $('offline-banner'); if (b) b.style.display = 'block'; });
-    if (!navigator.onLine) { var b = $('offline-banner'); if (b) b.style.display = 'block'; }
+    window.addEventListener('online', function() { var b = E('offline-banner'); if (b) b.style.display = 'none'; });
+    window.addEventListener('offline', function() { var b = E('offline-banner'); if (b) b.style.display = 'block'; });
+    if (!navigator.onLine) { var b2 = E('offline-banner'); if (b2) b2.style.display = 'block'; }
 
-    renderGrid();
+    render();
 
-    // URL param - bookmarklet
+    // Bookmarklet URL param
     var params = new URLSearchParams(window.location.search);
     var urlParam = params.get('url');
     if (urlParam) {
       var cleanUrl = decodeURIComponent(urlParam).split('&')[0];
-      if (el.videoUrl) el.videoUrl.value = cleanUrl;
-      var waitForReady = setInterval(function() {
-        if (el.addBtn && !el.addBtn.disabled) { clearInterval(waitForReady); addVideo(cleanUrl); }
+      var vu2 = E('video-url-input'); if (vu2) vu2.value = cleanUrl;
+      var wait = setInterval(function() {
+        var ab2 = E('add-video-btn'); if (ab2 && !ab2.disabled) { clearInterval(wait); doAdd(cleanUrl); }
       }, 200);
-      setTimeout(function() { clearInterval(waitForReady); }, 5000);
+      setTimeout(function() { clearInterval(wait); }, 5000);
     }
   }
-
-  window.toggleBulkMode = toggleBulkMode;
-  window.deleteVideoById = deleteVideoById;
-  window.toggleFavoriteVideo = toggleFavorite;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

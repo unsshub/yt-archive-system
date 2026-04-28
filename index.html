@@ -23,6 +23,7 @@
         <button class="filter-btn" data-filter="week">Week</button>
         <button class="filter-btn" data-filter="month">Month</button>
         <button class="filter-btn" data-filter="favorites">⭐</button>
+        <button class="filter-btn" data-filter="custom">📅 Range</button>
     </div>
     <div class="filter-group">
         <span class="filter-label">Sort:</span>
@@ -36,6 +37,14 @@
         <input type="file" id="import-file" accept=".json" style="display:none" />
     </div>
 </section>
+<div id="date-range-bar" class="date-range-bar" style="display:none">
+    <span class="filter-label">From:</span>
+    <input type="date" id="date-from" class="date-input" />
+    <span class="filter-label">To:</span>
+    <input type="date" id="date-to" class="date-input" />
+    <button id="date-apply" class="btn btn-sm btn-primary">Apply</button>
+    <button id="date-clear" class="btn btn-sm">Clear</button>
+</div>
 <section class="tag-categories" id="tag-categories" style="display:none"></section>
 <div id="bulk-action-bar" class="bulk-action-bar" style="display:none"><span id="bulk-count">0 selected</span><button id="bulk-favorite-btn" class="btn btn-sm">Favorite</button><button id="bulk-delete-btn" class="btn btn-sm btn-danger">Delete</button><button id="bulk-cancel-btn" class="btn btn-sm">Cancel</button></div>
 <section class="search-section"><input type="search" id="search-input" placeholder="Search..." autocomplete="off" /></section>

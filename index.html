@@ -7,126 +7,45 @@
     <link rel="manifest" href="/yt-archive-system/manifest.json">
     <title>YT Archive System</title>
     <link rel="stylesheet" href="/yt-archive-system/assets/main.v2.css">
-    <script>
-      (function() {
-        var rtl = ['ar','he','fa','ur'];
-        var lang = (navigator.language||'').split('-')[0];
-        if (rtl.includes(lang)) { document.documentElement.dir='rtl'; document.documentElement.lang=lang; }
-      })();
-    </script>
+    <script>(function(){var rtl=['ar','he','fa','ur'];var lang=(navigator.language||'').split('-')[0];if(rtl.includes(lang)){document.documentElement.dir='rtl';document.documentElement.lang=lang;}})();</script>
 </head>
 <body>
-    <div id="offline-banner" class="offline-banner" style="display:none" role="alert">
-        ⚠️ You are offline. Changes sync when connection restores.
+<div id="offline-banner" class="offline-banner" style="display:none" role="alert">⚠️ You are offline.</div>
+<div id="app">
+<header class="app-header"><h1>📺 YT Archive</h1><div class="header-controls"><button id="theme-toggle" class="btn btn-icon">🌙</button><button id="auto-sync-toggle" class="btn btn-sm">Auto: OFF</button><button id="sync-btn" class="btn btn-primary btn-sm">Sync</button><span id="connection-status" class="status-disconnected">Not Connected</span><button id="settings-trigger" class="btn btn-icon">⚙️</button></div></header>
+<main class="app-main">
+<section class="add-video-section"><h2 class="section-title">Save Video</h2><div class="input-group"><input type="url" id="video-url-input" placeholder="Paste YouTube URL..." autocomplete="off" /><button id="add-video-btn" class="btn btn-primary">Add</button></div><div class="input-group" style="margin-top:8px"><input type="text" id="tag-input" placeholder="Tags: tutorial, code, podcast" autocomplete="off" /></div></section>
+<section class="actions-bar">
+    <div class="filter-group">
+        <span id="date-filter-label" class="filter-label">All Time</span>
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="today">Today</button>
+        <button class="filter-btn" data-filter="week">Week</button>
+        <button class="filter-btn" data-filter="month">Month</button>
+        <button class="filter-btn" data-filter="favorites">⭐</button>
     </div>
-    <div id="app">
-        <header class="app-header">
-            <h1>📺 YT Archive</h1>
-            <div class="header-controls">
-                <button id="theme-toggle" class="btn btn-icon" title="Toggle theme">🌙</button>
-                <button id="auto-sync-toggle" class="btn btn-sm">🔄 Auto: OFF</button>
-                <button id="sync-btn" class="btn btn-primary btn-sm">🔄 Sync</button>
-                <span id="connection-status" class="status-disconnected">⚠️ Not Connected</span>
-                <button id="settings-trigger" class="btn btn-icon" aria-label="Settings">⚙️</button>
-            </div>
-        </header>
-        <main class="app-main">
-            <section class="add-video-section">
-                <h2 class="section-title">Save Video</h2>
-                <div class="input-group">
-                    <input type="url" id="video-url-input" placeholder="Paste YouTube URL..." autocomplete="off" />
-                    <button id="add-video-btn" class="btn btn-primary">➕ Add</button>
-                </div>
-                <div class="input-group" style="margin-top:8px;">
-                    <input type="text" id="tag-input" placeholder="Tags: tutorial, music, podcast" autocomplete="off" />
-                </div>
-            </section>
-            <section class="actions-bar">
-                <div class="filter-group">
-                    <span id="date-filter-label" class="filter-label">📅 All Time</span>
-                    <button class="filter-btn active" data-filter="all">All</button>
-                    <button class="filter-btn" data-filter="today">Today</button>
-                    <button class="filter-btn" data-filter="week">Week</button>
-                    <button class="filter-btn" data-filter="month">Month</button>
-                    <button class="filter-btn" data-filter="favorites">⭐</button>
-                </div>
-                <div class="action-group">
-                    <button id="bulk-mode-btn" class="btn btn-sm">☑️ Bulk</button>
-                    <button id="export-btn" class="btn btn-sm">📤 Export</button>
-                    <button id="import-btn" class="btn btn-sm">📥 Import</button>
-                    <input type="file" id="import-file" accept=".json" style="display:none" />
-                </div>
-            </section>
-            <div id="bulk-action-bar" class="bulk-action-bar" style="display:none">
-                <span id="bulk-count">0 selected</span>
-                <button id="bulk-favorite-btn" class="btn btn-sm">⭐ Favorite</button>
-                <button id="bulk-delete-btn" class="btn btn-sm btn-danger">🗑️ Delete</button>
-                <button id="bulk-cancel-btn" class="btn btn-sm">✕ Cancel</button>
-            </div>
-            <section class="search-section">
-                <input type="search" id="search-input" placeholder="Search..." autocomplete="off" />
-            </section>
-            <section class="video-grid-section">
-                <h2 class="section-title">Archive <span id="video-count" class="count-badge">0</span></h2>
-                <div id="video-grid" class="video-grid" role="list"></div>
-                <div id="empty-state" class="empty-state"><p>📭 No videos yet.</p></div>
-            </section>
-        </main>
-
-        <div id="tag-modal" class="modal" role="dialog" aria-hidden="true">
-            <div class="modal-overlay"></div>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>🏷️ Add Tags?</h2>
-                    <button id="tag-modal-close" class="btn btn-icon">✕</button>
-                </div>
-                <div class="modal-body">
-                    <p style="margin-bottom:12px;">Add tags to help find this video later (optional)</p>
-                    <input type="text" id="tag-modal-input" placeholder="tutorial, music, podcast" autocomplete="off" style="width:100%;" />
-                </div>
-                <div class="modal-footer">
-                    <button id="tag-modal-save" class="btn btn-primary">💾 Save with Tags</button>
-                    <button id="tag-modal-skip" class="btn btn-secondary">⏭️ Skip</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="settings-modal" class="modal" role="dialog" aria-hidden="true">
-            <div class="modal-overlay"></div>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>⚙️ GitHub Settings</h2>
-                    <button id="settings-close" class="btn btn-icon">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label>Personal Access Token (PAT)</label>
-                        <input type="password" id="pat-input" placeholder="ghp_..." autocomplete="off" dir="ltr" />
-                        <small>Stored locally with your videos</small>
-                    </div>
-                    <div class="form-group">
-                        <label>Repository</label>
-                        <input type="text" id="repo-input" placeholder="username/repository" dir="ltr" />
-                    </div>
-                    <div class="form-group">
-                        <button id="test-connection-btn" class="btn btn-secondary">🔍 Test Connection</button>
-                        <span id="test-result"></span>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="settings-save" class="btn btn-primary">💾 Save</button>
-                    <button id="settings-cancel" class="btn btn-secondary">Cancel</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="toast-container"></div>
+    <div class="filter-group">
+        <span class="filter-label">Sort:</span>
+        <button class="filter-btn active" data-sort="newest">Newest</button>
+        <button class="filter-btn" data-sort="oldest">Oldest</button>
     </div>
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/yt-archive-system/sw.js');
-      }
-    </script>
-    <script src="/yt-archive-system/assets/main.v3.js"></script>
+    <div class="action-group">
+        <button id="bulk-mode-btn" class="btn btn-sm">Bulk</button>
+        <button id="export-btn" class="btn btn-sm">Export</button>
+        <button id="import-btn" class="btn btn-sm">Import</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" />
+    </div>
+</section>
+<section class="tag-categories" id="tag-categories" style="display:none"></section>
+<div id="bulk-action-bar" class="bulk-action-bar" style="display:none"><span id="bulk-count">0 selected</span><button id="bulk-favorite-btn" class="btn btn-sm">Favorite</button><button id="bulk-delete-btn" class="btn btn-sm btn-danger">Delete</button><button id="bulk-cancel-btn" class="btn btn-sm">Cancel</button></div>
+<section class="search-section"><input type="search" id="search-input" placeholder="Search..." autocomplete="off" /></section>
+<section class="video-grid-section"><h2 class="section-title">Archive <span id="video-count" class="count-badge">0</span></h2><div id="video-grid" class="video-grid" role="list"></div><div id="empty-state" class="empty-state"><p>No videos yet.</p></div></section>
+</main>
+<div id="tag-modal" class="modal" role="dialog" aria-hidden="true"><div class="modal-overlay"></div><div class="modal-content"><div class="modal-header"><h2>Add Tags?</h2><button id="tag-modal-close" class="btn btn-icon">✕</button></div><div class="modal-body"><p style="margin-bottom:12px">Add tags (optional)</p><input type="text" id="tag-modal-input" placeholder="tutorial, code, podcast" autocomplete="off" style="width:100%" /></div><div class="modal-footer"><button id="tag-modal-save" class="btn btn-primary">Save with Tags</button><button id="tag-modal-skip" class="btn btn-secondary">Skip</button></div></div></div>
+<div id="settings-modal" class="modal" role="dialog" aria-hidden="true"><div class="modal-overlay"></div><div class="modal-content"><div class="modal-header"><h2>GitHub Settings</h2><button id="settings-close" class="btn btn-icon">✕</button></div><div class="modal-body"><div class="form-group"><label>Personal Access Token (PAT)</label><input type="password" id="pat-input" placeholder="ghp_..." autocomplete="off" dir="ltr" /><small>Stored locally with your videos</small></div><div class="form-group"><label>Repository</label><input type="text" id="repo-input" placeholder="username/repository" dir="ltr" /></div><div class="form-group"><button id="test-connection-btn" class="btn btn-secondary">Test Connection</button><span id="test-result"></span></div></div><div class="modal-footer"><button id="settings-save" class="btn btn-primary">Save</button><button id="settings-cancel" class="btn btn-secondary">Cancel</button></div></div></div>
+<div id="toast-container"></div>
+</div>
+<script>if('serviceWorker'in navigator){navigator.serviceWorker.register('/yt-archive-system/sw.js');}</script>
+<script src="/yt-archive-system/assets/main.v2.js"></script>
 </body>
 </html>

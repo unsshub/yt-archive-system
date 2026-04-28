@@ -1,4 +1,4 @@
-// YT Archive System v3 - Fixed: Bulk, Sync Position, Bookmarklet Tags
+// YT Archive System v3 - Smart Bookmarklet: Single Tab + Tag Choice
 (function() {
   'use strict';
 
@@ -57,6 +57,7 @@
   var bulkMode = false;
   var selectedVideos = [];
   var currentFilter = 'all';
+  var pendingBookmarkUrl = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -81,7 +82,12 @@
       repoInput: $('repo-input'),
       testResult: $('test-result'),
       testBtn: $('test-connection-btn'),
-      importFile: $('import-file')
+      importFile: $('import-file'),
+      tagModal: $('tag-modal'),
+      tagModalInput: $('tag-modal-input'),
+      tagModalSave: $('tag-modal-save'),
+      tagModalSkip: $('tag-modal-skip'),
+      tagModalClose: $('tag-modal-close')
     };
   }
 
@@ -233,24 +239,65 @@
     if (loadSettings().autoSync) silentSync();
   }
 
-  // ============ ADD VIDEO - With optional tag prompt for bookmarklet ============
-  function addVideo(prefilledUrl, skipTagPrompt) {
-    var url = prefilledUrl || (el.videoUrl ? el.videoUrl.value.trim() : '');
+  // ============ TAG MODAL ============
+  function showTagModal(url) {
+    pendingBookmarkUrl = url;
+    if (el.tagModal) {
+      el.tagModal.classList.add('active');
+      el.tagModal.setAttribute('aria-hidden', 'false');
+      if (el.tagModalInput) {
+        el.tagModalInput.value = '';
+        setTimeout(function() { el.tagModalInput.focus(); }, 100);
+      }
+    }
+  }
+
+  function hideTagModal() {
+    if (el.tagModal) {
+      el.tagModal.classList.remove('active');
+      el.tagModal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function confirmTags() {
+    var tags = el.tagModalInput ? el.tagModalInput.value.trim() : '';
+    hideTagModal();
+    if (el.tagInput) el.tagInput.value = tags;
+    if (pendingBookmarkUrl) {
+      doAddVideo(pendingBookmarkUrl, tags);
+      pendingBookmarkUrl = null;
+    }
+  }
+
+  function skipTags() {
+    hideTagModal();
+    if (pendingBookmarkUrl) {
+      if (el.tagInput) el.tagInput.value = '';
+      doAddVideo(pendingBookmarkUrl, '');
+      pendingBookmarkUrl = null;
+    }
+  }
+
+  // ============ ADD VIDEO ============
+  function addVideo(prefilledUrl) {
+    if (prefilledUrl) {
+      // From bookmarklet - show tag modal
+      showTagModal(prefilledUrl);
+      return;
+    }
+    // Manual entry - use whatever is in tag input
+    var url = el.videoUrl ? el.videoUrl.value.trim() : '';
+    var tags = el.tagInput ? el.tagInput.value.trim() : '';
+    doAddVideo(url, tags);
+  }
+
+  function doAddVideo(url, tags) {
     if (!url) { toast('Enter a YouTube URL', 'warning'); return; }
     if (!/youtube\.com|youtu\.be/.test(url)) { toast('Invalid YouTube URL', 'error'); return; }
 
-    // If called from bookmarklet (has prefilledUrl and no skipTagPrompt), show tag prompt
-    if (prefilledUrl && !skipTagPrompt) {
-      var tags = prompt('Add tags for this video? (comma separated, or leave empty)', '');
-      if (tags === null) return; // User cancelled
-      if (tags && tags.trim()) {
-        if (el.tagInput) el.tagInput.value = tags;
-      }
-    }
-
     var tagList = [];
-    if (el.tagInput && el.tagInput.value.trim()) {
-      tagList = el.tagInput.value.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+    if (tags && tags.trim()) {
+      tagList = tags.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
     }
 
     if (el.addBtn) { el.addBtn.disabled = true; el.addBtn.textContent = '⏳...'; }
@@ -370,7 +417,6 @@
     renderGrid();
   }
 
-  // ============ BULK MODE - FIXED ============
   function toggleBulkMode() {
     bulkMode = !bulkMode;
     selectedVideos = [];
@@ -390,33 +436,29 @@
 
   function bulkDelete() {
     if (selectedVideos.length === 0) { toast('No videos selected!', 'warning'); return; }
-    if (!confirm('Delete ' + selectedVideos.length + ' video(s)?')) return;
+    var count = selectedVideos.length;
+    if (!confirm('Delete ' + count + ' video(s)?')) return;
     var archive = loadArchive();
     saveArchive(archive.filter(function(v) { return selectedVideos.indexOf(v.id) === -1; }));
-    selectedVideos = [];
-    bulkMode = false;
-    updateBulkUI();
-    renderGrid();
-    toast('Deleted ' + selectedVideos.length + ' video(s)!', 'success');
+    selectedVideos = []; bulkMode = false;
+    updateBulkUI(); renderGrid();
+    toast('Deleted ' + count + ' video(s)!', 'success');
   }
 
   function bulkFavorite() {
     if (selectedVideos.length === 0) { toast('No videos selected!', 'warning'); return; }
+    var count = selectedVideos.length;
     var archive = loadArchive();
     archive.forEach(function(v) { if (selectedVideos.indexOf(v.id) > -1) v.favorite = true; });
     saveArchive(archive);
-    selectedVideos = [];
-    bulkMode = false;
-    updateBulkUI();
-    renderGrid();
-    toast('Favorited ' + selectedVideos.length + ' video(s)!', 'success');
+    selectedVideos = []; bulkMode = false;
+    updateBulkUI(); renderGrid();
+    toast('Favorited ' + count + ' video(s)!', 'success');
   }
 
   function cancelBulk() {
-    bulkMode = false;
-    selectedVideos = [];
-    updateBulkUI();
-    renderGrid();
+    bulkMode = false; selectedVideos = [];
+    updateBulkUI(); renderGrid();
   }
 
   function exportArchive() {
@@ -526,31 +568,28 @@
     if (el.themeToggle) el.themeToggle.addEventListener('click', toggleTheme);
     if (el.autoSyncToggle) el.autoSyncToggle.addEventListener('click', toggleAutoSync);
 
+    // Tag modal events
+    if (el.tagModalSave) el.tagModalSave.addEventListener('click', confirmTags);
+    if (el.tagModalSkip) el.tagModalSkip.addEventListener('click', skipTags);
+    if (el.tagModalClose) el.tagModalClose.addEventListener('click', skipTags);
+    if (el.tagModal) {
+      var tagOverlay = el.tagModal.querySelector('.modal-overlay');
+      if (tagOverlay) tagOverlay.addEventListener('click', skipTags);
+    }
+
     document.querySelectorAll('.filter-btn').forEach(function(b) {
       b.addEventListener('click', function() { setFilter(this.dataset.filter); });
     });
 
-    // Bulk buttons
-    var bulkModeBtn = $('bulk-mode-btn');
-    if (bulkModeBtn) {
-      bulkModeBtn.replaceWith(bulkModeBtn.cloneNode(true));
-      $('bulk-mode-btn').addEventListener('click', toggleBulkMode);
-    }
-    var bulkDelBtn = $('bulk-delete-btn');
-    if (bulkDelBtn) {
-      bulkDelBtn.replaceWith(bulkDelBtn.cloneNode(true));
-      $('bulk-delete-btn').addEventListener('click', bulkDelete);
-    }
-    var bulkFavBtn = $('bulk-favorite-btn');
-    if (bulkFavBtn) {
-      bulkFavBtn.replaceWith(bulkFavBtn.cloneNode(true));
-      $('bulk-favorite-btn').addEventListener('click', bulkFavorite);
-    }
-    var bulkCanBtn = $('bulk-cancel-btn');
-    if (bulkCanBtn) {
-      bulkCanBtn.replaceWith(bulkCanBtn.cloneNode(true));
-      $('bulk-cancel-btn').addEventListener('click', cancelBulk);
-    }
+    [ 'bulk-mode-btn', 'bulk-delete-btn', 'bulk-favorite-btn', 'bulk-cancel-btn' ].forEach(function(id) {
+      var btn = $(id);
+      if (btn) { btn.replaceWith(btn.cloneNode(true)); }
+    });
+
+    var bmBtn = $('bulk-mode-btn'); if (bmBtn) bmBtn.addEventListener('click', toggleBulkMode);
+    var bdBtn = $('bulk-delete-btn'); if (bdBtn) bdBtn.addEventListener('click', bulkDelete);
+    var bfBtn = $('bulk-favorite-btn'); if (bfBtn) bfBtn.addEventListener('click', bulkFavorite);
+    var bcBtn = $('bulk-cancel-btn'); if (bcBtn) bcBtn.addEventListener('click', cancelBulk);
 
     if ($('export-btn')) $('export-btn').addEventListener('click', function() { exportArchive(); toast('Exported!', 'success'); });
     if ($('import-btn')) $('import-btn').addEventListener('click', function() { if (el.importFile) el.importFile.click(); });
@@ -571,7 +610,10 @@
     if ($('sync-btn')) $('sync-btn').addEventListener('click', manualSync);
 
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && el.settingsModal && el.settingsModal.classList.contains('active')) closeSettings();
+      if (e.key === 'Escape') {
+        if (el.tagModal && el.tagModal.classList.contains('active')) skipTags();
+        if (el.settingsModal && el.settingsModal.classList.contains('active')) closeSettings();
+      }
     });
 
     window.addEventListener('online', function() {
@@ -580,14 +622,13 @@
     window.addEventListener('offline', function() {
       var banner = $('offline-banner'); if (banner) banner.style.display = 'block';
     });
-
     if (!navigator.onLine) {
       var banner = $('offline-banner'); if (banner) banner.style.display = 'block';
     }
 
     renderGrid();
 
-    // URL param auto-add with tag prompt
+    // URL param - handle bookmarklet
     var params = new URLSearchParams(window.location.search);
     var urlParam = params.get('url');
     if (urlParam) {
@@ -596,7 +637,7 @@
       var waitForReady = setInterval(function() {
         if (el.addBtn && !el.addBtn.disabled) {
           clearInterval(waitForReady);
-          addVideo(cleanUrl); // Opens tag prompt for bookmarklet
+          addVideo(cleanUrl); // Shows tag modal
         }
       }, 200);
       setTimeout(function() { clearInterval(waitForReady); }, 5000);

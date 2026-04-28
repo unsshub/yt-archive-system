@@ -72,6 +72,27 @@
                 <div id="empty-state" class="empty-state"><p>📭 No videos yet.</p></div>
             </section>
         </main>
+
+        <!-- Tag Modal -->
+        <div id="tag-modal" class="modal" role="dialog" aria-hidden="true">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🏷️ Add Tags?</h2>
+                    <button id="tag-modal-close" class="btn btn-icon">✕</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom:12px;">Add tags to help find this video later (optional)</p>
+                    <input type="text" id="tag-modal-input" placeholder="tutorial, music, podcast" autocomplete="off" style="width:100%;" />
+                </div>
+                <div class="modal-footer">
+                    <button id="tag-modal-save" class="btn btn-primary">💾 Save with Tags</button>
+                    <button id="tag-modal-skip" class="btn btn-secondary">⏭️ Skip</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
         <div id="settings-modal" class="modal" role="dialog" aria-hidden="true">
             <div class="modal-overlay"></div>
             <div class="modal-content">
@@ -100,6 +121,7 @@
                 </div>
             </div>
         </div>
+
         <div id="toast-container"></div>
     </div>
     <script>

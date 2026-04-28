@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="YT Archive System - Save and search YouTube videos offline">
     <meta name="theme-color" content="#2563eb">
     <link rel="manifest" href="/yt-archive-system/manifest.json">
-    <title>YT Archive System v2</title>
-    <link rel="stylesheet" href="/yt-archive-system/assets/main.v2.css?v=2">
+    <title>YT Archive System</title>
+    <link rel="stylesheet" href="/yt-archive-system/assets/main.v2.css">
     <script>
       (function() {
         var rtl = ['ar','he','fa','ur'];
@@ -25,24 +24,22 @@
             <h1>📺 YT Archive</h1>
             <div class="header-controls">
                 <button id="theme-toggle" class="btn btn-icon" title="Toggle theme">🌙</button>
-                <button id="auto-sync-toggle" class="btn btn-sm" title="Toggle auto sync">🔄 Auto Sync: OFF</button>
-                <span id="connection-status" class="status-disconnected" aria-live="polite">⚠️ Not Connected</span>
-                <button id="settings-trigger" class="btn btn-icon" aria-label="Open Settings">⚙️</button>
+                <button id="auto-sync-toggle" class="btn btn-sm">🔄 Auto: OFF</button>
+                <span id="connection-status" class="status-disconnected">⚠️ Not Connected</span>
+                <button id="settings-trigger" class="btn btn-icon" aria-label="Settings">⚙️</button>
             </div>
         </header>
         <main class="app-main">
             <section class="add-video-section">
                 <h2 class="section-title">Save Video</h2>
                 <div class="input-group">
-                    <input type="url" id="video-url-input" placeholder="Paste YouTube URL here..." autocomplete="off" />
+                    <input type="url" id="video-url-input" placeholder="Paste YouTube URL..." autocomplete="off" />
                     <button id="add-video-btn" class="btn btn-primary">➕ Add</button>
                 </div>
                 <div class="input-group" style="margin-top:8px;">
-                    <input type="text" id="tag-input" placeholder="Tags (comma separated)" autocomplete="off" />
+                    <input type="text" id="tag-input" placeholder="Tags: tutorial, music, podcast" autocomplete="off" />
                 </div>
-                <div id="add-status" class="status-message" aria-live="polite"></div>
             </section>
-
             <section class="actions-bar">
                 <div class="filter-group">
                     <span id="date-filter-label" class="filter-label">📅 All Time</span>
@@ -59,52 +56,46 @@
                     <input type="file" id="import-file" accept=".json" style="display:none" />
                 </div>
             </section>
-
             <div id="bulk-action-bar" class="bulk-action-bar" style="display:none">
                 <span id="bulk-count">0 selected</span>
                 <button id="bulk-favorite-btn" class="btn btn-sm">⭐ Favorite</button>
                 <button id="bulk-delete-btn" class="btn btn-sm btn-danger">🗑️ Delete</button>
                 <button id="bulk-cancel-btn" class="btn btn-sm">✕ Cancel</button>
             </div>
-
             <section class="search-section">
-                <input type="search" id="search-input" placeholder="Search in English or Arabic..." autocomplete="off" />
+                <input type="search" id="search-input" placeholder="Search..." autocomplete="off" />
             </section>
-
             <section class="video-grid-section">
-                <h2 class="section-title">Video Archive <span id="video-count" class="count-badge">0</span></h2>
+                <h2 class="section-title">Archive <span id="video-count" class="count-badge">0</span></h2>
                 <div id="video-grid" class="video-grid" role="list"></div>
-                <div id="empty-state" class="empty-state"><p>📭 No videos saved yet.</p></div>
+                <div id="empty-state" class="empty-state"><p>📭 No videos yet.</p></div>
             </section>
-
             <section class="sync-section">
                 <button id="sync-btn" class="btn btn-primary">🔄 Sync to GitHub</button>
             </section>
         </main>
-
-        <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-hidden="true">
+        <div id="settings-modal" class="modal" role="dialog" aria-hidden="true">
             <div class="modal-overlay"></div>
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 id="settings-title">⚙️ GitHub Settings</h2>
-                    <button id="settings-close" class="btn btn-icon" aria-label="Close">✕</button>
+                    <h2>⚙️ GitHub Settings</h2>
+                    <button id="settings-close" class="btn btn-icon">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="pat-input">Personal Access Token (PAT)</label>
-                        <input type="password" id="pat-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" dir="ltr" />
-                        <small class="form-help">Create token with <strong>repo</strong> scope</small>
-                        <span id="pat-error" class="form-error" role="alert"></span>
+                        <label>Personal Access Token (PAT)</label>
+                        <input type="password" id="pat-input" placeholder="ghp_..." autocomplete="off" dir="ltr" />
+                        <small>Token stored locally, never sent to our servers</small>
+                        <span id="pat-error" class="form-error"></span>
                     </div>
                     <div class="form-group">
-                        <label for="repo-input">Repository</label>
+                        <label>Repository</label>
                         <input type="text" id="repo-input" placeholder="username/repository" dir="ltr" />
-                        <small class="form-help">Format: <code>owner/repository-name</code></small>
-                        <span id="repo-error" class="form-error" role="alert"></span>
+                        <small>Format: <code>owner/repo-name</code></small>
                     </div>
                     <div class="form-group">
                         <button id="test-connection-btn" class="btn btn-secondary">🔍 Test Connection</button>
-                        <span id="test-result" aria-live="polite"></span>
+                        <span id="test-result"></span>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -113,16 +104,13 @@
                 </div>
             </div>
         </div>
-
-        <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+        <div id="toast-container"></div>
     </div>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/yt-archive-system/sw.js');
-        });
+        navigator.serviceWorker.register('/yt-archive-system/sw.js');
       }
     </script>
-    <script src="/yt-archive-system/assets/main.v2.js?v=2"></script>
+    <script src="/yt-archive-system/assets/main.v3.js"></script>
 </body>
 </html>

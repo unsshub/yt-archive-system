@@ -55,6 +55,14 @@ function loadArchive() {
   }
 }
 
+// NEW: Delete video by ID
+function deleteVideo(videoId) {
+  var archive = loadArchive();
+  var filtered = archive.filter(function(v) { return v.id !== videoId; });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  return filtered;
+}
+
 function searchArchive(query) {
   if (!query || query.trim() === '') return loadArchive();
   var normalizedQuery = normalizeText(query);
@@ -592,6 +600,15 @@ function addVideo() {
     });
 }
 
+// NEW: Delete video function
+function deleteVideoById(videoId, videoTitle) {
+  if (confirm('Delete "' + videoTitle + '"?')) {
+    deleteVideo(videoId);
+    showAppToast('Video deleted!', 'success');
+    renderVideoGrid();
+  }
+}
+
 function renderVideoGrid() {
   if (!elements.searchInput || !elements.videoGrid) return;
   var query = elements.searchInput.value;
@@ -611,10 +628,12 @@ function renderVideoGrid() {
     var card = document.createElement('div');
     card.className = 'video-card';
     card.setAttribute('role', 'listitem');
-    card.innerHTML = '<a href="' + video.url + '" target="_blank" rel="noopener noreferrer" class="video-card-link">' +
+    card.innerHTML = 
+      '<a href="' + video.url + '" target="_blank" rel="noopener noreferrer" class="video-card-link">' +
       '<img src="' + video.thumbnail + '" alt="Thumbnail" class="video-thumbnail" loading="lazy" />' +
       '<div class="video-info"><h3 class="video-title">' + escapeHtml(video.title) + '</h3>' +
-      '<p class="video-date">' + formatDate(video.savedAt) + '</p></div></a>';
+      '<p class="video-date">' + formatDate(video.savedAt) + '</p></div></a>' +
+      '<button class="btn-delete" onclick="deleteVideoById(\'' + video.id + '\', \'' + escapeHtml(video.title).replace(/'/g, "\\'") + '\')" title="Delete video">🗑️</button>';
     elements.videoGrid.appendChild(card);
   });
 }
@@ -675,6 +694,9 @@ function initEventListeners() {
   var syncBtn = document.getElementById('sync-btn');
   if (syncBtn) syncBtn.addEventListener('click', syncToGithubApp);
 }
+
+// Make deleteVideoById globally accessible for onclick handler
+window.deleteVideoById = deleteVideoById;
 
 function init() {
   elements = getElements();

@@ -1,4 +1,4 @@
-// YT Archive System v3 - Persistent Settings + URL Parameter Auto-Add
+// YT Archive System v3
 (function() {
   'use strict';
 
@@ -131,7 +131,7 @@
     updateAutoSyncUI(s.autoSync);
     if (s.autoSync) startAutoSync();
     else stopAutoSync();
-    toast(s.autoSync ? 'Auto sync ON (every 5 min)' : 'Auto sync OFF', 'info');
+    toast(s.autoSync ? 'Auto sync ON' : 'Auto sync OFF', 'info');
   }
 
   function startAutoSync() {
@@ -164,7 +164,7 @@
 
   function syncToGitHub(videos, token, repo) {
     var parts = repo.split('/');
-    if (parts.length < 2) return Promise.reject(new Error('Invalid repo format. Use: username/repo'));
+    if (parts.length < 2) return Promise.reject(new Error('Invalid repo format'));
     var url = 'https://api.github.com/repos/' + parts[0] + '/' + parts[1] + '/contents/data/videos.json';
     var sha = null;
 
@@ -178,13 +178,8 @@
     })
     .then(function() {
       var content = btoa(unescape(encodeURIComponent(JSON.stringify(videos, null, 2))));
-      var body = {
-        message: 'Update: ' + videos.length + ' video(s)',
-        content: content,
-        branch: 'main'
-      };
+      var body = { message: 'Update: ' + videos.length + ' video(s)', content: content, branch: 'main' };
       if (sha) body.sha = sha;
-
       return fetch(url, {
         method: 'PUT',
         headers: {
@@ -197,9 +192,8 @@
     })
     .then(function(r) {
       if (!r.ok) {
-        if (r.status === 409) throw new Error('Conflict. Wait a moment and try again.');
-        if (r.status === 401) throw new Error('Invalid token. Check settings.');
-        if (r.status === 404) throw new Error('Repository not found. Create it first.');
+        if (r.status === 409) throw new Error('Conflict. Try again.');
+        if (r.status === 401) throw new Error('Invalid token.');
         throw new Error('Sync error: ' + r.status);
       }
       return r.json();
@@ -243,9 +237,10 @@
     if (loadSettings().autoSync) silentSync();
   }
 
-  // ============ Add Video (supports auto-fill from URL param) ============
   function addVideo(prefilledUrl) {
     var url = prefilledUrl || (el.videoUrl ? el.videoUrl.value.trim() : '');
+    console.log('Adding video, URL:', url);
+    
     if (!url) { toast('Enter a YouTube URL', 'warning'); return; }
     if (!/youtube\.com|youtu\.be/.test(url)) { toast('Invalid YouTube URL', 'error'); return; }
 
@@ -274,7 +269,7 @@
         renderGrid();
         if (loadSettings().autoSync) silentSync();
       })
-      .catch(function() { toast('Error fetching video', 'error'); })
+      .catch(function() { toast('Error fetching video info', 'error'); })
       .then(function() { if (el.addBtn) { el.addBtn.disabled = false; el.addBtn.textContent = '➕ Add'; } });
   }
 
@@ -396,7 +391,6 @@
     selectedVideos = []; bulkMode = false;
     updateBulkUI(); renderGrid();
     toast('Deleted!', 'success');
-    if (loadSettings().autoSync) silentSync();
   }
 
   function bulkFavorite() {
@@ -406,7 +400,7 @@
     saveArchive(archive);
     selectedVideos = []; bulkMode = false;
     updateBulkUI(); renderGrid();
-    toast('Added to favorites!', 'success');
+    toast('Favorited!', 'success');
   }
 
   function cancelBulk() {
@@ -447,10 +441,10 @@
   function manualSync() {
     var token = getPat();
     var repo = getRepo();
-    if (!token || !repo) { toast('Set up GitHub in Settings ⚙️ first', 'warning'); openSettings(); return; }
+    if (!token || !repo) { toast('Set up GitHub in Settings first', 'warning'); openSettings(); return; }
     toast('Syncing...', 'info');
     syncToGitHub(loadArchive(), token, repo)
-      .then(function() { toast('Synced! ✅', 'success'); })
+      .then(function() { toast('Synced!', 'success'); })
       .catch(function(err) { toast(err.message, 'error'); });
   }
 
@@ -477,7 +471,7 @@
     setRepo(repo.trim());
     updateConnectionStatus();
     closeSettings();
-    toast('Settings saved! 🔒', 'success');
+    toast('Settings saved!', 'success');
   }
 
   function testConnection() {
@@ -562,17 +556,22 @@
 
     renderGrid();
 
-    // ============ URL Parameter Auto-Add ============
+    // ============ URL PARAMETER AUTO-ADD ============
     var params = new URLSearchParams(window.location.search);
     var urlParam = params.get('url');
     if (urlParam) {
-      // Clean the URL (remove extra params from YouTube links)
-      var cleanUrl = urlParam.split('&')[0]; // Remove tracking params
+      console.log('URL param detected:', urlParam);
+      var cleanUrl = decodeURIComponent(urlParam).split('&')[0];
       if (el.videoUrl) el.videoUrl.value = cleanUrl;
-      // Auto-add with a small delay to ensure everything is ready
-      setTimeout(function() {
-        addVideo(cleanUrl);
-      }, 500);
+      var waitForReady = setInterval(function() {
+        if (el.addBtn && !el.addBtn.disabled) {
+          clearInterval(waitForReady);
+          console.log('Auto-adding:', cleanUrl);
+          addVideo(cleanUrl);
+        }
+      }, 200);
+      // Timeout after 5 seconds
+      setTimeout(function() { clearInterval(waitForReady); }, 5000);
     }
   }
 

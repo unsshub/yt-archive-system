@@ -1,20 +1,50 @@
-// YT Archive System v3 - Fixed PAT Storage
+// YT Archive System v3 - PAT stored in videos archive for LibreWolf
 (function() {
   'use strict';
 
   var STORAGE_KEY = 'yt-archive-videos';
-  var SETTINGS_KEY = 'yt-archive-settings';
-  var PAT_KEY = 'yt-archive-pat-plain';
-  var REPO_KEY = 'yt-archive-repo-plain';
+
+  // Videos structure: { pat: "xxx", repo: "xxx", videos: [...] }
+  function loadAll() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"videos":[]}'); }
+    catch(e) { return { videos: [] }; }
+  }
+
+  function saveAll(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
 
   function loadArchive() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-    catch(e) { return []; }
+    return loadAll().videos || [];
   }
 
   function saveArchive(videos) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
+    var data = loadAll();
+    data.videos = videos;
+    saveAll(data);
   }
+
+  function getPat() {
+    return loadAll().pat || '';
+  }
+
+  function setPat(token) {
+    var data = loadAll();
+    data.pat = token;
+    saveAll(data);
+  }
+
+  function getRepo() {
+    return loadAll().repo || '';
+  }
+
+  function setRepo(repo) {
+    var data = loadAll();
+    data.repo = repo;
+    saveAll(data);
+  }
+
+  var SETTINGS_KEY = 'yt-archive-settings';
 
   function loadSettings() {
     try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }
@@ -23,24 +53,6 @@
 
   function saveSettingsObj(s) {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-  }
-
-  function getPat() {
-    return localStorage.getItem(PAT_KEY) || '';
-  }
-
-  function setPat(token) {
-    if (token) localStorage.setItem(PAT_KEY, token);
-    else localStorage.removeItem(PAT_KEY);
-  }
-
-  function getRepo() {
-    return localStorage.getItem(REPO_KEY) || '';
-  }
-
-  function setRepo(repo) {
-    if (repo) localStorage.setItem(REPO_KEY, repo);
-    else localStorage.removeItem(REPO_KEY);
   }
 
   var bulkMode = false;
@@ -392,7 +404,7 @@
   }
 
   function exportArchive() {
-    var data = JSON.stringify(loadArchive(), null, 2);
+    var data = JSON.stringify(loadAll(), null, 2);
     var blob = new Blob([data], { type: 'application/json' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -405,15 +417,21 @@
     reader.onload = function(e) {
       try {
         var imported = JSON.parse(e.target.result);
-        if (!Array.isArray(imported)) throw new Error('Invalid');
-        var existing = loadArchive();
+        var existing = loadAll();
+        if (!imported.videos && Array.isArray(imported)) {
+          imported = { videos: imported };
+        }
         var count = 0;
-        imported.forEach(function(v) {
-          if (!existing.some(function(x) { return x.id === v.id || x.url === v.url; })) {
-            existing.push(v); count++;
+        (imported.videos || []).forEach(function(v) {
+          if (!existing.videos.some(function(x) { return x.id === v.id || x.url === v.url; })) {
+            existing.videos.push(v); count++;
           }
         });
-        saveArchive(existing);
+        // Restore PAT and repo from import if present
+        if (imported.pat && !existing.pat) existing.pat = imported.pat;
+        if (imported.repo && !existing.repo) existing.repo = imported.repo;
+        saveAll(existing);
+        updateConnectionStatus();
         toast('Imported ' + count + ' video(s)!', 'success');
         renderGrid();
       } catch(err) { toast('Invalid file', 'error'); }

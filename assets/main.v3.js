@@ -1,25 +1,11 @@
-// YT Archive System v3
+// YT Archive System v3 - Fixed PAT Storage
 (function() {
   'use strict';
 
-  function obfuscate(str) {
-    if (!str) return '';
-    return btoa(str.split('').map(function(c, i) {
-      return String.fromCharCode(c.charCodeAt(0) ^ (i % 7 + 1));
-    }).join(''));
-  }
-
-  function deobfuscate(str) {
-    if (!str) return '';
-    return atob(str).split('').map(function(c, i) {
-      return String.fromCharCode(c.charCodeAt(0) ^ (i % 7 + 1));
-    }).join('');
-  }
-
-  var STORAGE_KEY = 'videos';
+  var STORAGE_KEY = 'yt-archive-videos';
   var SETTINGS_KEY = 'yt-archive-settings';
-  var PAT_KEY = 'yt-archive-pat';
-  var REPO_KEY = 'yt-archive-repo';
+  var PAT_KEY = 'yt-archive-pat-plain';
+  var REPO_KEY = 'yt-archive-repo-plain';
 
   function loadArchive() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
@@ -40,12 +26,11 @@
   }
 
   function getPat() {
-    var raw = localStorage.getItem(PAT_KEY);
-    return raw ? deobfuscate(raw) : '';
+    return localStorage.getItem(PAT_KEY) || '';
   }
 
   function setPat(token) {
-    if (token) localStorage.setItem(PAT_KEY, obfuscate(token));
+    if (token) localStorage.setItem(PAT_KEY, token);
     else localStorage.removeItem(PAT_KEY);
   }
 
@@ -239,8 +224,6 @@
 
   function addVideo(prefilledUrl) {
     var url = prefilledUrl || (el.videoUrl ? el.videoUrl.value.trim() : '');
-    console.log('Adding video, URL:', url);
-    
     if (!url) { toast('Enter a YouTube URL', 'warning'); return; }
     if (!/youtube\.com|youtu\.be/.test(url)) { toast('Invalid YouTube URL', 'error'); return; }
 
@@ -496,7 +479,6 @@
     });
   }
 
-  // ============ Init ============
   function init() {
     el = getElements();
 
@@ -556,21 +538,18 @@
 
     renderGrid();
 
-    // ============ URL PARAMETER AUTO-ADD ============
+    // URL param auto-add
     var params = new URLSearchParams(window.location.search);
     var urlParam = params.get('url');
     if (urlParam) {
-      console.log('URL param detected:', urlParam);
       var cleanUrl = decodeURIComponent(urlParam).split('&')[0];
       if (el.videoUrl) el.videoUrl.value = cleanUrl;
       var waitForReady = setInterval(function() {
         if (el.addBtn && !el.addBtn.disabled) {
           clearInterval(waitForReady);
-          console.log('Auto-adding:', cleanUrl);
           addVideo(cleanUrl);
         }
       }, 200);
-      // Timeout after 5 seconds
       setTimeout(function() { clearInterval(waitForReady); }, 5000);
     }
   }
